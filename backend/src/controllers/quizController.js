@@ -57,7 +57,7 @@ export async function quizGenerator(req, res) {
 }
 
 export async function submitQuiz(req, res) {
-  const { answers, quizId, forceRetake } = req.body;
+  const { answers, quizId } = req.body;
 
   if (!quizId || !mongoose.Types.ObjectId.isValid(quizId)) {
     return res.status(400).json({ message: "Valid quizId is required" });
@@ -77,20 +77,24 @@ export async function submitQuiz(req, res) {
   }
 
   try {
-    const existingAttempt = await Attempt.findOne({ userId: req.userId, quizId });
-    if (existingAttempt && !forceRetake) {
-      return res.status(409).json({
-        message: "You already attempted this quiz. Submit again if you want to retake it.",
-        canRetake: true,
-      });
-    }
+    const questionIds = answers
+      .map((ans) => ans.questionId)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
 
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+    const quizzes = await Quiz.find({ "questions._id": { $in: questionIds } });
+    if (!quizzes.length) return res.status(404).json({ message: "Quiz questions not found" });
+
+    const questionMap = new Map();
+    quizzes.forEach((qz) => {
+      qz.questions.forEach((q) => {
+        questionMap.set(q._id.toString(), q);
+      });
+    });
 
     let score = 0;
     answers.forEach((ans) => {
-      const question = quiz.questions.id(ans.questionId);
+      const question = questionMap.get(ans.questionId);
       if (question && question.correctAnswer === ans.answer) score++;
     });
 
@@ -117,10 +121,18 @@ export async function getAttemptReport(req, res) {
       return res.status(403).json({ message: "Access denied for this attempt" });
     }
 
-    const quiz = attempt.quizId;
-    if (!quiz) return res.status(404).json({ message: "Quiz not found for this attempt" });
+    const attemptedQuestionIds = (attempt.answers || [])
+      .map((a) => a.questionId)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
 
-    const questionMap = new Map(quiz.questions.map((q) => [q._id.toString(), q]));
+    const quizzes = await Quiz.find({ "questions._id": { $in: attemptedQuestionIds } });
+    const questionMap = new Map();
+    quizzes.forEach((qz) => {
+      qz.questions.forEach((q) => {
+        questionMap.set(q._id.toString(), q);
+      });
+    });
 
     const report = (attempt.answers || [])
       .map((attemptAnswer) => {
@@ -147,7 +159,13 @@ export async function getAttemptReport(req, res) {
 
     return res.json({
       attemptId: attempt._id,
-      quiz: { id: quiz._id, title: quiz.title, category: quiz.category },
+      quiz: attempt.quizId
+        ? {
+            id: attempt.quizId._id,
+            title: attempt.quizId.title,
+            category: attempt.quizId.category,
+          }
+        : null,
       score: attempt.score,
       total: report.length,
       submittedAt: attempt.submittedAt,
@@ -193,13 +211,23 @@ export async function quizAnalysis(req, res) {
     const attempt = await Attempt.findById(attemptId);
     if (!attempt) return res.status(404).json({ message: "Attempt not found" });
 
-    const quiz = await Quiz.findById(attempt.quizId);
+    const attemptedQuestionIds = (attempt.answers || [])
+      .map((a) => a.questionId)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+    const quizzes = await Quiz.find({ "questions._id": { $in: attemptedQuestionIds } });
+    const questionMap = new Map();
+    quizzes.forEach((qz) => {
+      qz.questions.forEach((q) => {
+        questionMap.set(q._id.toString(), q);
+      });
+    });
 
     let wrongQuestions = [];
     let targetQuestion = null;
 
     attempt.answers.forEach((ans) => {
-      const question = quiz.questions.id(ans.questionId);
+      const question = questionMap.get(ans.questionId);
       if (!question) return;
 
       const questionEntry = {

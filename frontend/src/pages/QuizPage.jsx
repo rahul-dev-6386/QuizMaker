@@ -39,8 +39,6 @@ export default function QuizPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [timeLeft, setTimeLeft] = useState(null);
-    const [showRetakePrompt, setShowRetakePrompt] = useState(false);
-    const [retakeBusy, setRetakeBusy] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -82,7 +80,7 @@ export default function QuizPage() {
             setTimeLeft((t) => {
                 if (t <= 1) {
                     clearInterval(timerRef.current);
-                    handleSubmit(true);
+                    handleSubmit();
                     return 0;
                 }
                 return t - 1;
@@ -122,49 +120,29 @@ export default function QuizPage() {
         return counts;
     }, [questions, visited, selected, review]);
 
-    const payloadForSubmit = (forceRetake = false) => ({
+    const payloadForSubmit = () => ({
         answers: questions.map((q) => ({
             questionId: q.questionId,
             answer: selected[q.questionId] !== undefined ? String(selected[q.questionId]) : '',
         })),
         quizId: quizMeta?.quizId,
-        forceRetake,
     });
 
-    const executeSubmit = async (forceRetake = false) => {
+    const executeSubmit = async () => {
         setSubmitting(true);
-        const res = await submitQuiz(payloadForSubmit(forceRetake));
+        const res = await submitQuiz(payloadForSubmit());
         navigate(`/results/${res.data.attemptId}`, {
             state: { score: res.data.score, total: res.data.total },
         });
     };
 
-    const handleSubmit = async (autoSubmit = false) => {
+    const handleSubmit = async () => {
         clearInterval(timerRef.current);
         try {
-            await executeSubmit(false);
+            await executeSubmit();
         } catch (err) {
-            const canRetake = err.response?.status === 409 && err.response?.data?.canRetake;
-            if (canRetake) {
-                setShowRetakePrompt(true);
-                setError(autoSubmit ? 'Time is over. You already attempted this quiz. Start again to save this retake.' : '');
-            } else {
-                setError(err.response?.data?.message || 'Failed to submit quiz.');
-            }
+            setError(err.response?.data?.message || 'Failed to submit quiz.');
             setSubmitting(false);
-        }
-    };
-
-    const handleConfirmRetake = async () => {
-        setRetakeBusy(true);
-        try {
-            await executeSubmit(true);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to submit retake.');
-            setSubmitting(false);
-        } finally {
-            setRetakeBusy(false);
-            setShowRetakePrompt(false);
         }
     };
 
@@ -423,36 +401,6 @@ export default function QuizPage() {
                     </div>
                 </div>
             </div>
-
-            {showRetakePrompt && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(15,23,42,0.45)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 300,
-                        padding: '1rem',
-                    }}
-                >
-                    <div className="card" style={{ width: '100%', maxWidth: 460 }}>
-                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.6rem' }}>Quiz Already Attempted</h3>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                            You already attempted this quiz. Do you want to start again and save this as a retake?
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'flex-end' }}>
-                            <button className="btn btn-ghost" onClick={() => setShowRetakePrompt(false)} disabled={retakeBusy}>
-                                Cancel
-                            </button>
-                            <button className="btn btn-primary" onClick={handleConfirmRetake} disabled={retakeBusy}>
-                                {retakeBusy ? 'Starting...' : 'Start Again'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
