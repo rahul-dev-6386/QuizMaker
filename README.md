@@ -54,8 +54,6 @@ project/
 - Auth
 - `POST /signup`
 - `POST /signin`
-- `POST /verify-otp`
-- `POST /resend-otp`
 - `POST /admin/authenticate`
 
 - Quiz
@@ -127,12 +125,6 @@ JWT_SECRET=your_jwt_secret
 ADMIN_AUTH_KEY=your_admin_auth_key
 ADMIN_SECRET=your_admin_secret
 GEMINI_API_KEY=optional_gemini_api_key
-OTP_EXPIRY_MINUTES=10
-SMTP_HOST=smtp_host
-SMTP_PORT=587
-SMTP_USER=smtp_user
-SMTP_PASS=smtp_password
-MAIL_FROM="QuizMaster <no-reply@example.com>"
 ```
 
 Run backend:

@@ -8,7 +8,6 @@ import ThemeToggle from './components/ThemeToggle';
 import LandingPage from './pages/LandingPage';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
-import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import QuizzesPage from './pages/QuizzesPage';
 import QuizPage from './pages/QuizPage';
@@ -52,7 +51,6 @@ function AppRoutes() {
         <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
         <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-        <Route path="/verify-email" element={<PublicRoute><VerifyEmail /></PublicRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/quizzes" element={<ProtectedRoute><QuizzesPage /></ProtectedRoute>} />
         <Route path="/quiz/:count" element={<ProtectedRoute><QuizPage /></ProtectedRoute>} />

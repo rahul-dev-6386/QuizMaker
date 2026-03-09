@@ -61,12 +61,6 @@ export default function SignIn() {
             login(token, userData);
             navigate('/dashboard');
         } catch (err) {
-            const code = err.response?.data?.code;
-            const email = err.response?.data?.email || form.email;
-            if (code === 'EMAIL_NOT_VERIFIED') {
-                navigate(`/verify-email?email=${encodeURIComponent(email)}`);
-                return;
-            }
             setError(err.response?.data?.message || 'Sign in failed. Check your credentials.');
         } finally {
             setLoading(false);

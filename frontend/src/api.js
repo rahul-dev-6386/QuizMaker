@@ -34,8 +34,6 @@ API.interceptors.response.use(
 /* ——— Auth ——— */
 export const signup = (data) => API.post('/signup', data);
 export const signin = (data) => API.post('/signin', data);
-export const verifyOtp = (data) => API.post('/verify-otp', data);
-export const resendOtp = (data) => API.post('/resend-otp', data);
 
 /* ——— Quizzes ——— */
 export const getAllQuizzes = () => API.get('/quizzes');

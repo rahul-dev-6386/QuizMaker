@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { signup } from '../api';
+import { signin, signup } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { LogoIcon } from '../components/Icons';
 
+function parseJwt(token) {
+    try {
+        const payload = token.split('.')[1];
+        return JSON.parse(atob(payload));
+    } catch {
+        return {};
+    }
+}
+
 export default function SignUp() {
+    const { login } = useAuth();
     const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
     const [errors, setErrors] = useState({});
@@ -59,19 +70,22 @@ export default function SignUp() {
 
         setLoading(true);
         try {
-            const res = await signup({
+            await signup({
                 name: form.name.trim(),
                 email: form.email,
                 password: form.password,
             });
 
-            const debugOtp = res.data?.debugOtp;
-            setApiSuccess(
-                debugOtp
-                    ? `Account created. OTP sent. Dev OTP: ${debugOtp}`
-                    : 'Account created. Please verify OTP sent to your email.'
-            );
-            navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
+            const signinRes = await signin({ email: form.email, password: form.password });
+            const { token, user } = signinRes.data;
+            const payload = parseJwt(token);
+            login(token, {
+                id: user?.id || payload.id,
+                role: user?.role || payload.role,
+                name: user?.name || form.name.trim(),
+                email: user?.email || form.email,
+            });
+            navigate('/dashboard');
         } catch (err) {
             setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
@@ -176,6 +190,12 @@ export default function SignUp() {
                         </button>
                     </form>
 
+                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '1.25rem' }}>
+                        Already have an account?{' '}
+                        <Link to="/signin" style={{ color: 'var(--primary-light)', fontWeight: 600 }}>
+                            Sign in
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>
