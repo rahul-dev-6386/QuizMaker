@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { signup, signin } from '../api';
+import { googleSignin, signup } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { LogoIcon } from '../components/Icons';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 function parseJwt(token) {
     try {
         const payload = token.split('.')[1];
         return JSON.parse(atob(payload));
-    } catch { return {}; }
+    } catch {
+        return {};
+    }
 }
 
 export default function SignUp() {
@@ -18,7 +21,9 @@ export default function SignUp() {
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
     const [errors, setErrors] = useState({});
     const [apiError, setApiError] = useState('');
+    const [apiSuccess, setApiSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const signupSchema = z
         .object({
@@ -49,8 +54,32 @@ export default function SignUp() {
         setApiError('');
     };
 
+    const handleGoogleCredential = async (credential) => {
+        setApiError('');
+        setGoogleLoading(true);
+        try {
+            const res = await googleSignin({ idToken: credential });
+            const { token, user } = res.data;
+            const payload = parseJwt(token);
+            login(token, {
+                id: user?.id || payload.id,
+                role: user?.role || payload.role,
+                name: user?.name || '',
+                email: user?.email || '',
+            });
+            navigate('/dashboard');
+        } catch (err) {
+            setApiError(err.response?.data?.message || 'Google sign-in failed.');
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setApiError('');
+        setApiSuccess('');
+
         const parsed = signupSchema.safeParse(form);
         if (!parsed.success) {
             const mapped = {};
@@ -61,19 +90,22 @@ export default function SignUp() {
             setErrors(mapped);
             return;
         }
+
         setLoading(true);
         try {
-            await signup({
+            const res = await signup({
                 name: form.name.trim(),
                 email: form.email,
                 password: form.password,
             });
-            // Auto sign-in after signup
-            const res = await signin({ email: form.email, password: form.password });
-            const { token } = res.data;
-            const payload = parseJwt(token);
-            login(token, { id: payload.id, role: payload.role, name: form.name.trim(), email: form.email });
-            navigate('/dashboard');
+
+            const debugOtp = res.data?.debugOtp;
+            setApiSuccess(
+                debugOtp
+                    ? `Account created. OTP sent. Dev OTP: ${debugOtp}`
+                    : 'Account created. Please verify OTP sent to your email.'
+            );
+            navigate(`/verify-email?email=${encodeURIComponent(form.email)}`);
         } catch (err) {
             setApiError(err.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
@@ -105,7 +137,6 @@ export default function SignUp() {
             backgroundImage: 'var(--gradient-mesh)',
         }}>
             <div style={{ width: '100%', maxWidth: 460 }}>
-                {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <div className="navbar-logo-icon" style={{
                         width: 56, height: 56, fontSize: '1.5rem',
@@ -123,11 +154,8 @@ export default function SignUp() {
                     background: 'var(--bg-card)', border: '1px solid var(--glass-border)',
                     borderRadius: 'var(--radius-xl)', padding: '2rem', boxShadow: 'var(--shadow-lg)',
                 }}>
-                    {apiError && (
-                        <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>
-                            ✕ {apiError}
-                        </div>
-                    )}
+                    {apiError && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>✕ {apiError}</div>}
+                    {apiSuccess && <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{apiSuccess}</div>}
 
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.125rem' }}>
                         <div className="form-group">
@@ -135,7 +163,7 @@ export default function SignUp() {
                             <input className={`form-input${errors.name ? ' error' : ''}`}
                                 type="text" name="name" id="signup-name"
                                 placeholder="Enter your full name" value={form.name} onChange={handleChange} />
-                            {errors.name && <span className="form-error">⚠ {errors.name}</span>}
+                            {errors.name && <span className="form-error">{errors.name}</span>}
                         </div>
 
                         <div className="form-group">
@@ -143,7 +171,7 @@ export default function SignUp() {
                             <input className={`form-input${errors.email ? ' error' : ''}`}
                                 type="email" name="email" id="signup-email"
                                 placeholder="Enter your email" value={form.email} onChange={handleChange} />
-                            {errors.email && <span className="form-error">⚠ {errors.email}</span>}
+                            {errors.email && <span className="form-error">{errors.email}</span>}
                         </div>
 
                         <div className="form-group">
@@ -165,7 +193,7 @@ export default function SignUp() {
                                     <span style={{ fontSize: '0.75rem', color: strength.color }}>{strength.label}</span>
                                 </div>
                             )}
-                            {errors.password && <span className="form-error">⚠ {errors.password}</span>}
+                            {errors.password && <span className="form-error">{errors.password}</span>}
                         </div>
 
                         <div className="form-group">
@@ -173,20 +201,21 @@ export default function SignUp() {
                             <input className={`form-input${errors.confirm ? ' error' : ''}`}
                                 type="password" name="confirm" id="signup-confirm"
                                 placeholder="Repeat your password" value={form.confirm} onChange={handleChange} />
-                            {errors.confirm && <span className="form-error">⚠ {errors.confirm}</span>}
+                            {errors.confirm && <span className="form-error">{errors.confirm}</span>}
                         </div>
 
                         <button type="submit" id="signup-submit" className="btn btn-primary btn-lg"
-                            disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
-                            {loading ? (
-                                <><div className="spinner" style={{ width: 16, height: 16 }} /> Creating account…</>
-                            ) : 'Create Account →'}
+                            disabled={loading || googleLoading} style={{ width: '100%', marginTop: '1rem' }}>
+                            {loading ? 'Creating account...' : 'Create Account ->'}
                         </button>
                     </form>
 
                     <div className="divider-text" style={{ margin: '1.5rem 0' }}>or</div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={loading || googleLoading} />
+                    </div>
 
-                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '1.25rem' }}>
                         Already have an account?{' '}
                         <Link to="/signin" style={{ color: 'var(--primary-light)', fontWeight: 600 }}>
                             Sign in

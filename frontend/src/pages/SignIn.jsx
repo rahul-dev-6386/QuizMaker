@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { signin } from '../api';
+import { googleSignin, signin } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { LogoIcon } from '../components/Icons';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
-// Inline minimal jwt decode (avoid adding another package)
 function parseJwt(token) {
     try {
         const payload = token.split('.')[1];
@@ -23,6 +23,7 @@ export default function SignIn() {
     const [fieldErrors, setFieldErrors] = useState({});
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const signinSchema = z.object({
         email: z.string().email('Please enter a valid email address.'),
@@ -33,6 +34,27 @@ export default function SignIn() {
         setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
         setFieldErrors((p) => ({ ...p, [e.target.name]: '' }));
         setError('');
+    };
+
+    const handleGoogleCredential = async (credential) => {
+        setError('');
+        setGoogleLoading(true);
+        try {
+            const res = await googleSignin({ idToken: credential });
+            const { token, user } = res.data;
+            const payload = parseJwt(token);
+            login(token, {
+                id: user?.id || payload.id,
+                role: user?.role || payload.role,
+                email: user?.email || '',
+                name: user?.name || '',
+            });
+            navigate('/dashboard');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Google sign-in failed.');
+        } finally {
+            setGoogleLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -62,6 +84,12 @@ export default function SignIn() {
             login(token, userData);
             navigate('/dashboard');
         } catch (err) {
+            const code = err.response?.data?.code;
+            const email = err.response?.data?.email || form.email;
+            if (code === 'EMAIL_NOT_VERIFIED') {
+                navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+                return;
+            }
             setError(err.response?.data?.message || 'Sign in failed. Check your credentials.');
         } finally {
             setLoading(false);
@@ -75,16 +103,7 @@ export default function SignIn() {
             background: 'var(--bg-base)',
             backgroundImage: 'var(--gradient-mesh)',
         }}>
-            {/* Left decorative panel (hidden on mobile) */}
-            <div style={{
-                flex: 1, maxWidth: 500, marginRight: '3rem',
-                display: 'none',
-            }} className="auth-decoration">
-                {/* handled via responsive */}
-            </div>
-
             <div style={{ width: '100%', maxWidth: 420 }}>
-                {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <div className="navbar-logo-icon" style={{
                         width: 56, height: 56, fontSize: '1.5rem',
@@ -103,7 +122,6 @@ export default function SignIn() {
                     </p>
                 </div>
 
-                {/* Card */}
                 <div style={{
                     background: 'var(--bg-card)',
                     border: '1px solid var(--glass-border)',
@@ -152,34 +170,25 @@ export default function SignIn() {
                             type="submit"
                             id="signin-submit"
                             className="btn btn-primary btn-lg"
-                            disabled={loading}
+                            disabled={loading || googleLoading}
                             style={{ width: '100%', marginTop: '0.5rem' }}
                         >
-                            {loading ? (
-                                <>
-                                    <div className="spinner" style={{ width: 16, height: 16 }} />
-                                    Signing in…
-                                </>
-                            ) : 'Sign In →'}
+                            {loading ? 'Signing in...' : 'Sign In ->'}
                         </button>
                     </form>
 
                     <div className="divider-text" style={{ margin: '1.5rem 0' }}>or</div>
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={loading || googleLoading} />
+                    </div>
 
-                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '1.25rem' }}>
                         Don't have an account?{' '}
                         <Link to="/signup" style={{ color: 'var(--primary-light)', fontWeight: 600 }}>
                             Create one free
                         </Link>
                     </p>
                 </div>
-
-                <p style={{
-                    textAlign: 'center', marginTop: '1.5rem',
-                    color: 'var(--text-muted)', fontSize: '0.8rem',
-                }}>
-                    By signing in you agree to our Terms of Service.
-                </p>
             </div>
         </div>
     );
