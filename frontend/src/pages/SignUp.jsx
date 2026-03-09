@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { signup } from '../api';
 import { LogoIcon } from '../components/Icons';
@@ -176,12 +176,6 @@ export default function SignUp() {
                         </button>
                     </form>
 
-                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '1.25rem' }}>
-                        Already have an account?{' '}
-                        <Link to="/signin" style={{ color: 'var(--primary-light)', fontWeight: 600 }}>
-                            Sign in
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>
