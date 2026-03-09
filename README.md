@@ -139,6 +139,25 @@ Health check:
 GET http://localhost:3000/health
 ```
 
+## Deploy Backend (Render, Free Tier)
+
+This repo includes a root `render.yaml` blueprint for backend deployment.
+
+1. Push latest code to GitHub.
+2. In Render, click `New` -> `Blueprint`.
+3. Connect this repository and select the default branch.
+4. Render will detect `render.yaml` and create `quizmaster-backend`.
+5. In Render service settings, set environment variables:
+   - `MONGO_URL`
+   - `JWT_SECRET`
+   - `ADMIN_AUTH_KEY`
+   - `ADMIN_SECRET`
+   - `GEMINI_API_KEY` (optional)
+6. Trigger deploy and verify:
+   - `https://<your-render-service>.onrender.com/health`
+
+You can use `backend/.env.example` as the source template for env variable names.
+
 ## Frontend Setup
 
 ```bash
