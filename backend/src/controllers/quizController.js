@@ -12,19 +12,31 @@ export async function quizGenerator(req, res) {
   }
 
   try {
-    const pipeline = [];
-    if (category) pipeline.push({ $match: { category } });
-    pipeline.push({ $unwind: "$questions" });
-    pipeline.push({ $sample: { size: count } });
+    const basePipeline = [];
+    if (category) basePipeline.push({ $match: { category } });
+    basePipeline.push({ $unwind: "$questions" });
 
-    const questions = await Quiz.aggregate(pipeline);
-    if (questions.length === 0) {
+    const available = await Quiz.aggregate([...basePipeline, { $count: "total" }]);
+    const availableCount = available?.[0]?.total || 0;
+
+    if (availableCount === 0) {
       return res.status(404).json({
         message: category
           ? `No questions available for category "${category}"`
           : "No questions available",
       });
     }
+
+    if (availableCount < count) {
+      return res.status(409).json({
+        code: "INSUFFICIENT_QUESTIONS",
+        requestedCount: count,
+        availableCount,
+        message: `Only ${availableCount} question(s) available${category ? ` for "${category}"` : ""}. Please choose ${availableCount} or fewer.`,
+      });
+    }
+
+    const questions = await Quiz.aggregate([...basePipeline, { $sample: { size: count } }]);
 
     const formatted = questions.map((q) => ({
       quizId: q._id,

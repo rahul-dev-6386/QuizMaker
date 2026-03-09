@@ -54,7 +54,16 @@ export default function QuizPage() {
                 }
                 setTimeLeft(parseInt(count, 10) * 60);
             } catch (err) {
-                setError(err.response?.data?.message || 'Could not load quiz questions.');
+                const code = err.response?.data?.code;
+                if (code === 'INSUFFICIENT_QUESTIONS') {
+                    const available = err.response?.data?.availableCount;
+                    const requested = err.response?.data?.requestedCount || count;
+                    setError(
+                        `Requested ${requested} question(s), but only ${available} available. Choose a lower count or add more questions.`
+                    );
+                } else {
+                    setError(err.response?.data?.message || 'Could not load quiz questions.');
+                }
             } finally {
                 setLoading(false);
             }

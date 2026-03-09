@@ -18,7 +18,7 @@ export default function QuizzesPage() {
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
-    const [questionCount, setQuestionCount] = useState(10);
+    const [questionCount, setQuestionCount] = useState(5);
     const [showModal, setShowModal] = useState(false);
     const [randomTopic, setRandomTopic] = useState('All');
 
