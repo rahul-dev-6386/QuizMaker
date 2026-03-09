@@ -19,7 +19,6 @@ export const env = {
   ADMIN_SECRET: process.env.ADMIN_SECRET || "admin123",
   ADMIN_AUTH_KEY: process.env.ADMIN_AUTH_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   OTP_EXPIRY_MINUTES: Number(process.env.OTP_EXPIRY_MINUTES || 10),
   SMTP_HOST: process.env.SMTP_HOST,
   SMTP_PORT: process.env.SMTP_PORT,

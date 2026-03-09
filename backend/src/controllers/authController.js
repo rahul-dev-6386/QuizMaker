@@ -1,13 +1,10 @@
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import { env } from "../config/env.js";
 import { Users } from "../models/index.js";
 import { sendOtpMail } from "../services/emailService.js";
-
-const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID || undefined);
 
 function issueAuthPayload(user) {
   const token = jwt.sign({ id: user._id.toString(), role: user.role }, env.JWT_SECRET, {
@@ -203,10 +200,6 @@ export async function signinHandler(req, res) {
     const user = await Users.findOne({ email });
     if (!user) return res.status(403).json({ message: "Invalid email or password" });
 
-    if (!user.password) {
-      return res.status(403).json({ message: "Use Google Sign-In for this account" });
-    }
-
     if (!user.isVerified) {
       return res.status(403).json({
         message: "Email not verified. Please verify with OTP.",
@@ -226,64 +219,6 @@ export async function signinHandler(req, res) {
     });
   } catch {
     return res.status(500).json({ message: "Signin error" });
-  }
-}
-
-export async function googleSigninHandler(req, res) {
-  const schema = z.object({
-    idToken: z.string().min(1),
-  });
-
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ message: "Validation failed" });
-  }
-
-  if (!env.GOOGLE_CLIENT_ID) {
-    return res.status(500).json({ message: "GOOGLE_CLIENT_ID is not configured" });
-  }
-
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: req.body.idToken,
-      audience: env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const email = payload?.email;
-    const name = payload?.name || "Google User";
-    const subject = payload?.sub;
-    const emailVerified = payload?.email_verified;
-
-    if (!email || !subject || !emailVerified) {
-      return res.status(403).json({ message: "Google account email is not verified" });
-    }
-
-    let user = await Users.findOne({ email });
-    if (!user) {
-      user = await Users.create({
-        email,
-        name,
-        authProvider: "google",
-        oauthSubject: subject,
-        isVerified: true,
-        role: "user",
-      });
-    } else {
-      user.name = user.name || name;
-      user.isVerified = true;
-      user.authProvider = user.authProvider || "google";
-      user.oauthSubject = user.oauthSubject || subject;
-      await user.save();
-    }
-
-    const auth = issueAuthPayload(user);
-    return res.json({
-      ...auth,
-      message: "Google signin successful",
-    });
-  } catch {
-    return res.status(403).json({ message: "Invalid Google token" });
   }
 }
 

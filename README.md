@@ -56,7 +56,6 @@ project/
 - `POST /signin`
 - `POST /verify-otp`
 - `POST /resend-otp`
-- `POST /auth/google`
 - `POST /admin/authenticate`
 
 - Quiz
@@ -128,7 +127,6 @@ JWT_SECRET=your_jwt_secret
 ADMIN_AUTH_KEY=your_admin_auth_key
 ADMIN_SECRET=your_admin_secret
 GEMINI_API_KEY=optional_gemini_api_key
-GOOGLE_CLIENT_ID=your_google_oauth_client_id
 OTP_EXPIRY_MINUTES=10
 SMTP_HOST=smtp_host
 SMTP_PORT=587
@@ -183,7 +181,6 @@ Set frontend env vars in deployment:
 
 ```env
 VITE_API_BASE_URL=your_backend_base_url
-VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id
 ```
 
 ## Run Full Stack Locally

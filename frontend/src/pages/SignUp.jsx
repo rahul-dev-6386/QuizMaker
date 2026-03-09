@@ -1,29 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import { googleSignin, signup } from '../api';
-import { useAuth } from '../context/AuthContext';
+import { signup } from '../api';
 import { LogoIcon } from '../components/Icons';
-import GoogleAuthButton from '../components/GoogleAuthButton';
-
-function parseJwt(token) {
-    try {
-        const payload = token.split('.')[1];
-        return JSON.parse(atob(payload));
-    } catch {
-        return {};
-    }
-}
 
 export default function SignUp() {
-    const { login } = useAuth();
     const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
     const [errors, setErrors] = useState({});
     const [apiError, setApiError] = useState('');
     const [apiSuccess, setApiSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    const [googleLoading, setGoogleLoading] = useState(false);
 
     const signupSchema = z
         .object({
@@ -52,27 +39,6 @@ export default function SignUp() {
         setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
         setErrors((p) => ({ ...p, [e.target.name]: '' }));
         setApiError('');
-    };
-
-    const handleGoogleCredential = async (credential) => {
-        setApiError('');
-        setGoogleLoading(true);
-        try {
-            const res = await googleSignin({ idToken: credential });
-            const { token, user } = res.data;
-            const payload = parseJwt(token);
-            login(token, {
-                id: user?.id || payload.id,
-                role: user?.role || payload.role,
-                name: user?.name || '',
-                email: user?.email || '',
-            });
-            navigate('/dashboard');
-        } catch (err) {
-            setApiError(err.response?.data?.message || 'Google sign-in failed.');
-        } finally {
-            setGoogleLoading(false);
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -205,15 +171,10 @@ export default function SignUp() {
                         </div>
 
                         <button type="submit" id="signup-submit" className="btn btn-primary btn-lg"
-                            disabled={loading || googleLoading} style={{ width: '100%', marginTop: '1rem' }}>
+                            disabled={loading} style={{ width: '100%', marginTop: '1rem' }}>
                             {loading ? 'Creating account...' : 'Create Account ->'}
                         </button>
                     </form>
-
-                    <div className="divider-text" style={{ margin: '1.5rem 0' }}>or</div>
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <GoogleAuthButton onCredential={handleGoogleCredential} disabled={loading || googleLoading} />
-                    </div>
 
                     <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '1.25rem' }}>
                         Already have an account?{' '}
