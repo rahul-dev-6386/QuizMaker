@@ -7,6 +7,7 @@ import {
     mergeAdminQuizzes,
 } from '../api';
 import { ChartIcon, DashboardIcon, QuizIcon, TrophyIcon } from '../components/Icons';
+import MathText from '../components/MathText';
 
 const EMPTY_QUESTION = () => ({
     id: Math.random().toString(36).slice(2),
@@ -319,6 +320,22 @@ export default function AdminPage() {
                                     <label className="form-label">Prompt</label>
                                     <textarea className="form-input" rows={2} value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
                                 </div>
+                                {q.question?.trim() && (
+                                    <div
+                                        style={{
+                                            marginBottom: '0.75rem',
+                                            padding: '0.625rem 0.75rem',
+                                            border: '1px dashed var(--border)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            background: 'var(--bg-surface)',
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                                            LaTeX Preview
+                                        </div>
+                                        <MathText text={q.question} />
+                                    </div>
+                                )}
                                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                     <label className="form-label">Question Image URL (optional)</label>
                                     <input
