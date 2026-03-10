@@ -39,6 +39,16 @@ export default function QuizPage() {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [timeLeft, setTimeLeft] = useState(null);
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== 'undefined' ? window.innerWidth <= 900 : false
+    );
+
+    useEffect(() => {
+        const onResize = () => setIsMobile(window.innerWidth <= 900);
+        onResize();
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     useEffect(() => {
         (async () => {
@@ -218,7 +228,13 @@ export default function QuizPage() {
 
     return (
         <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '2rem', maxWidth: '1360px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: '1rem' }}>
+            <div
+                style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 320px',
+                    gap: '1rem',
+                }}
+            >
                 <div className="card" style={{ padding: '1.25rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                         <div>
