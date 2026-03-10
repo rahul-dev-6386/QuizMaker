@@ -36,6 +36,8 @@ project/
 - Detailed attempt report (selected vs correct answer per question)
 - Admin operations: create, list, delete, merge quizzes, list users
 - Assistant endpoint for quiz stats and AI-generated learning analysis
+- Supports LaTeX in question/option text using `$...$` or `$$...$$`
+- Supports optional `questionImage` URL per question (options remain text)
 
 ## Backend Deep Dive (Primary Logic)
 

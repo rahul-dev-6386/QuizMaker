@@ -11,6 +11,7 @@ import { ChartIcon, DashboardIcon, QuizIcon, TrophyIcon } from '../components/Ic
 const EMPTY_QUESTION = () => ({
     id: Math.random().toString(36).slice(2),
     question: '',
+    questionImage: '',
     options: ['', '', '', ''],
     correctAnswer: '',
 });
@@ -92,7 +93,9 @@ export default function AdminPage() {
         if (!form.category.trim()) return 'Category is required.';
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
-            if (!q.question.trim()) return `Question ${i + 1}: question text is required.`;
+            if (!q.question.trim() && !(q.questionImage || '').trim()) {
+                return `Question ${i + 1}: add question text or a question image URL.`;
+            }
             if (q.options.some((o) => !o.trim())) return `Question ${i + 1}: all 4 options are required.`;
             if (q.correctAnswer === '') return `Question ${i + 1}: select a correct answer.`;
         }
@@ -110,8 +113,10 @@ export default function AdminPage() {
             }
 
             const mapped = parsed.questions.map((q, idx) => {
-                if (!q?.question || !Array.isArray(q?.options) || q.options.length !== 4) {
-                    throw new Error(`Question ${idx + 1}: must include question and exactly 4 options.`);
+                const questionText = String(q?.question || '');
+                const questionImage = String(q?.questionImage || q?.image || '');
+                if ((!questionText.trim() && !questionImage.trim()) || !Array.isArray(q?.options) || q.options.length !== 4) {
+                    throw new Error(`Question ${idx + 1}: include question text or image and exactly 4 options.`);
                 }
                 const correctAnswer = String(q.correctAnswer);
                 if (!['0', '1', '2', '3'].includes(correctAnswer)) {
@@ -119,7 +124,8 @@ export default function AdminPage() {
                 }
                 return {
                     id: Math.random().toString(36).slice(2),
-                    question: q.question,
+                    question: questionText,
+                    questionImage,
                     options: q.options.map((opt) => String(opt)),
                     correctAnswer,
                 };
@@ -144,8 +150,9 @@ export default function AdminPage() {
             await createQuiz({
                 title: form.title.trim(),
                 category: form.category.trim(),
-                questions: questions.map(({ question, options, correctAnswer }) => ({
+                questions: questions.map(({ question, questionImage, options, correctAnswer }) => ({
                     question,
+                    questionImage,
                     options,
                     correctAnswer,
                 })),
@@ -270,6 +277,15 @@ export default function AdminPage() {
                                 <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                                     <label className="form-label">Prompt</label>
                                     <textarea className="form-input" rows={2} value={q.question} onChange={(e) => handleQuestionChange(q.id, 'question', e.target.value)} />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                                    <label className="form-label">Question Image URL (optional)</label>
+                                    <input
+                                        className="form-input"
+                                        value={q.questionImage || ''}
+                                        onChange={(e) => handleQuestionChange(q.id, 'questionImage', e.target.value)}
+                                        placeholder="https://example.com/question-image.png"
+                                    />
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '0.75rem', marginBottom: '0.75rem' }}>
                                     {q.options.map((opt, optIdx) => (

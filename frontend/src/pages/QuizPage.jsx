@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getRandomQuiz, submitQuiz } from '../api';
+import MathText from '../components/MathText';
 
 const STATUS_COLORS = {
     notVisited: { bg: '#ffffff', text: '#0f172a', border: '#cbd5e1' },
@@ -276,8 +277,25 @@ export default function QuizPage() {
                     </div>
 
                     <div style={{ marginBottom: '1rem', fontSize: '1.03rem', fontWeight: 600, lineHeight: 1.6 }}>
-                        {q.question}
+                        <MathText text={q.question} />
                     </div>
+
+                    {q.questionImage && (
+                        <div style={{ marginBottom: '1rem' }}>
+                            <img
+                                src={q.questionImage}
+                                alt="Question visual"
+                                style={{
+                                    width: '100%',
+                                    maxHeight: '280px',
+                                    objectFit: 'contain',
+                                    borderRadius: '10px',
+                                    border: '1px solid var(--border)',
+                                    background: 'var(--bg-surface)',
+                                }}
+                            />
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1rem' }}>
                         {(q.options || []).map((opt, idx) => {
@@ -316,7 +334,7 @@ export default function QuizPage() {
                                     }}>
                                         {isSelected ? '✓' : ['A', 'B', 'C', 'D'][idx] || idx + 1}
                                     </span>
-                                    <span>{optionText}</span>
+                                    <span><MathText text={optionText} /></span>
                                 </button>
                             );
                         })}

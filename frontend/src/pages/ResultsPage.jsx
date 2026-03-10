@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getAttemptReport, getQuizAnalysis } from '../api';
 import { BotIcon } from '../components/Icons';
+import MathText from '../components/MathText';
 
 function ScoreCircle({ score, total }) {
     const pct = total ? Math.round((score / total) * 100) : 0;
@@ -275,12 +276,28 @@ Explain why answers could be wrong, the key concept, and a short memory tip.`;
                             <div key={q.questionId} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start' }}>
                                     <p style={{ fontWeight: 600, marginBottom: '0.75rem' }}>
-                                        {index + 1}. {q.question}
+                                        {index + 1}. <MathText text={q.question} />
                                     </p>
                                     <span className={`badge ${q.isCorrect ? 'badge-success' : 'badge-danger'}`}>
                                         {q.isCorrect ? 'Correct' : 'Incorrect'}
                                     </span>
                                 </div>
+                                {q.questionImage && (
+                                    <div style={{ marginBottom: '0.75rem' }}>
+                                        <img
+                                            src={q.questionImage}
+                                            alt="Question visual"
+                                            style={{
+                                                width: '100%',
+                                                maxHeight: '280px',
+                                                objectFit: 'contain',
+                                                borderRadius: '8px',
+                                                border: '1px solid var(--border)',
+                                                background: 'var(--bg-surface)',
+                                            }}
+                                        />
+                                    </div>
+                                )}
                                 <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
                                     {q.options.map((opt) => {
                                         const isCorrect = opt.id === q.correctOptionId;
@@ -296,7 +313,7 @@ Explain why answers could be wrong, the key concept, and a short memory tip.`;
                                                     fontSize: '0.9rem',
                                                 }}
                                             >
-                                                {opt.text}
+                                                <MathText text={opt.text} />
                                             </div>
                                         );
                                     })}

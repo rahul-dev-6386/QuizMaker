@@ -42,6 +42,7 @@ export async function quizGenerator(req, res) {
       quizId: q._id,
       questionId: q.questions._id,
       question: q.questions.question,
+      questionImage: q.questions.questionImage || "",
       options: shuffleArray(
         q.questions.options.map((text, originalIndex) => ({
           id: String(originalIndex),
@@ -147,6 +148,7 @@ export async function getAttemptReport(req, res) {
         return {
           questionId: questionDoc._id.toString(),
           question: questionDoc.question,
+          questionImage: questionDoc.questionImage || "",
           options: questionDoc.options.map((text, idx) => ({ id: String(idx), text })),
           selectedOptionId: selected,
           selectedOptionText: selectedText || "Not answered",
@@ -233,6 +235,7 @@ export async function quizAnalysis(req, res) {
       const questionEntry = {
         questionId: question._id.toString(),
         question: question.question,
+        questionImage: question.questionImage || "",
         correctAnswer: question.options[question.correctAnswer],
         userAnswer: ans.answer !== "" ? question.options[ans.answer] : "Not answered",
         isCorrect: question.correctAnswer === ans.answer,

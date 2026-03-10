@@ -11,16 +11,20 @@ export async function createQuiz(req, res) {
   }
 
   const normalizedQuestions = questions.map((q) => ({
-    question: q?.question,
+    question: q?.question ? String(q.question) : "",
+    questionImage: q?.questionImage ? String(q.questionImage).trim() : "",
     options: q?.options,
     correctAnswer: String(q?.correctAnswer),
   }));
 
   const invalidQuestion = normalizedQuestions.some((q) => {
-    if (!q.question || typeof q.question !== "string" || !q.question.trim()) {
+    if (!q.question.trim() && !q.questionImage.trim()) {
       return true;
     }
     if (!Array.isArray(q.options) || q.options.length !== 4) {
+      return true;
+    }
+    if (q.questionImage && typeof q.questionImage !== "string") {
       return true;
     }
     if (q.options.some((opt) => typeof opt !== "string" || !opt.trim())) {
@@ -129,10 +133,13 @@ export async function adminMergeQuizzes(req, res) {
     for (const quiz of sourceQuizzes) {
       for (const q of quiz.questions || []) {
         const fingerprint = `${q.question}::${(q.options || []).join("||")}::${q.correctAnswer}`;
-        if (seen.has(fingerprint)) continue;
-        seen.add(fingerprint);
+        const imagePart = q.questionImage || "";
+        const withImageFingerprint = `${fingerprint}::${imagePart}`;
+        if (seen.has(withImageFingerprint)) continue;
+        seen.add(withImageFingerprint);
         mergedQuestions.push({
           question: q.question,
+          questionImage: q.questionImage || "",
           options: q.options,
           correctAnswer: String(q.correctAnswer),
         });
