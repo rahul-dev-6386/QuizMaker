@@ -29,6 +29,7 @@ export default function QuizPage() {
     const navigate = useNavigate();
     const timerRef = useRef(null);
     const selectedCategory = new URLSearchParams(location.search).get('category') || '';
+    const selectedQuizId = new URLSearchParams(location.search).get('quizId') || '';
 
     const [questions, setQuestions] = useState([]);
     const [quizMeta, setQuizMeta] = useState(null);
@@ -54,7 +55,11 @@ export default function QuizPage() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await getRandomQuiz(count, selectedCategory || undefined);
+                const res = await getRandomQuiz(
+                    count,
+                    selectedCategory || undefined,
+                    selectedQuizId || undefined
+                );
                 const qs = res.data.questions || [];
                 setQuestions(qs);
                 if (qs.length > 0) {
@@ -77,7 +82,7 @@ export default function QuizPage() {
                 setLoading(false);
             }
         })();
-    }, [count, selectedCategory]);
+    }, [count, selectedCategory, selectedQuizId]);
 
     useEffect(() => {
         if (!questions[current]?.questionId) return;

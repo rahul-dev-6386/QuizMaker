@@ -37,9 +37,12 @@ export const signin = (data) => API.post('/signin', data);
 
 /* ——— Quizzes ——— */
 export const getAllQuizzes = () => API.get('/quizzes');
-export const getRandomQuiz = (count, category) =>
+export const getRandomQuiz = (count, category, quizId) =>
     API.get(`/quiz/random/${count}`, {
-        params: category ? { category } : undefined,
+        params: {
+            ...(category ? { category } : {}),
+            ...(quizId ? { quizId } : {}),
+        },
     });
 export const submitQuiz = (data) => API.post('/quiz/submit', data);
 

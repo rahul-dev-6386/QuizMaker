@@ -145,7 +145,13 @@ export default function QuizzesPage() {
                                     <button
                                         className="btn btn-primary btn-sm"
                                         style={{ flex: 1 }}
-                                        onClick={() => navigate('/quiz/10')}
+                                        onClick={() => {
+                                            const params = new URLSearchParams();
+                                            if (quiz.id) params.set('quizId', quiz.id);
+                                            if (quiz.category) params.set('category', quiz.category);
+                                            const query = params.toString() ? `?${params.toString()}` : '';
+                                            navigate(`/quiz/10${query}`);
+                                        }}
                                     >
                                         Start Quiz
                                     </button>

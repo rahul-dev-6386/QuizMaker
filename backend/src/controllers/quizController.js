@@ -6,6 +6,7 @@ import { generateGeminiText } from "../services/geminiService.js";
 export async function quizGenerator(req, res) {
   const count = parseInt(req.params.count);
   const category = (req.query.category || "").toString().trim();
+  const quizId = (req.query.quizId || "").toString().trim();
 
   if (count <= 0) {
     return res.status(400).json({ message: "Question count must be greater than 0" });
@@ -13,7 +14,11 @@ export async function quizGenerator(req, res) {
 
   try {
     const basePipeline = [];
-    if (category) basePipeline.push({ $match: { category } });
+    if (quizId && mongoose.Types.ObjectId.isValid(quizId)) {
+      basePipeline.push({ $match: { _id: new mongoose.Types.ObjectId(quizId) } });
+    } else if (category) {
+      basePipeline.push({ $match: { category } });
+    }
     basePipeline.push({ $unwind: "$questions" });
 
     const available = await Quiz.aggregate([...basePipeline, { $count: "total" }]);
