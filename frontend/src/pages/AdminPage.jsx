@@ -102,36 +102,77 @@ export default function AdminPage() {
         return null;
     };
 
+    const toOptionText = (opt) => {
+        if (typeof opt === 'string' || typeof opt === 'number') return String(opt);
+        if (opt && typeof opt === 'object') {
+            return String(opt.text ?? opt.option ?? opt.value ?? '');
+        }
+        return '';
+    };
+
+    const resolveCorrectIndex = (raw, options) => {
+        if (raw === undefined || raw === null || raw === '') return null;
+        if (typeof raw === 'number') {
+            if (raw >= 0 && raw <= 3) return String(raw);
+            if (raw >= 1 && raw <= 4) return String(raw - 1);
+        }
+        const str = String(raw).trim();
+        if (['0', '1', '2', '3'].includes(str)) return str;
+        if (['1', '2', '3', '4'].includes(str)) return String(Number(str) - 1);
+
+        const optionMatch = options.findIndex((o) => o.trim() === str);
+        if (optionMatch >= 0) return String(optionMatch);
+
+        const letterMap = { A: '0', B: '1', C: '2', D: '3' };
+        const upper = str.toUpperCase();
+        if (letterMap[upper] !== undefined) return letterMap[upper];
+        return null;
+    };
+
     const handleJsonImport = () => {
         resetMessages();
         if (!jsonInput.trim()) return setError('Paste quiz JSON first.');
 
         try {
             const parsed = JSON.parse(jsonInput);
-            if (!parsed?.title || !parsed?.category || !Array.isArray(parsed?.questions)) {
-                return setError('JSON must contain title, category and questions array.');
+            const title = String(parsed?.title ?? parsed?.quizTitle ?? parsed?.name ?? '').trim();
+            const category = String(parsed?.category ?? parsed?.topic ?? parsed?.subject ?? 'General').trim();
+            const questionsRaw = parsed?.questions ?? parsed?.items ?? parsed?.data;
+
+            if (!title || !Array.isArray(questionsRaw) || questionsRaw.length === 0) {
+                return setError(
+                    'JSON must include title and questions array. Supported keys: title/quizTitle, category/topic, questions/items.'
+                );
             }
 
-            const mapped = parsed.questions.map((q, idx) => {
-                const questionText = String(q?.question || '');
-                const questionImage = String(q?.questionImage || q?.image || '');
-                if ((!questionText.trim() && !questionImage.trim()) || !Array.isArray(q?.options) || q.options.length !== 4) {
-                    throw new Error(`Question ${idx + 1}: include question text or image and exactly 4 options.`);
+            const mapped = questionsRaw.map((q, idx) => {
+                const questionText = String(q?.question ?? q?.prompt ?? q?.text ?? '');
+                const questionImage = String(q?.questionImage ?? q?.image ?? q?.imageUrl ?? '');
+                const optionSource = q?.options ?? q?.choices ?? q?.answers;
+                if ((!questionText.trim() && !questionImage.trim()) || !Array.isArray(optionSource) || optionSource.length !== 4) {
+                    throw new Error(`Question ${idx + 1}: include question/prompt and exactly 4 options.`);
                 }
-                const correctAnswer = String(q.correctAnswer);
-                if (!['0', '1', '2', '3'].includes(correctAnswer)) {
-                    throw new Error(`Question ${idx + 1}: correctAnswer must be 0, 1, 2, or 3.`);
+                const options = optionSource.map(toOptionText);
+                if (options.some((opt) => !opt.trim())) {
+                    throw new Error(`Question ${idx + 1}: each option must have text.`);
+                }
+                const correctAnswer = resolveCorrectIndex(
+                    q?.correctAnswer ?? q?.correct ?? q?.answer ?? q?.correctIndex,
+                    options
+                );
+                if (correctAnswer === null) {
+                    throw new Error(`Question ${idx + 1}: invalid correct answer (use index 0-3, 1-4, A-D, or exact option text).`);
                 }
                 return {
                     id: Math.random().toString(36).slice(2),
                     question: questionText,
                     questionImage,
-                    options: q.options.map((opt) => String(opt)),
+                    options,
                     correctAnswer,
                 };
             });
 
-            setForm({ title: String(parsed.title), category: String(parsed.category) });
+            setForm({ title, category: category || 'General' });
             setQuestions(mapped);
             setSuccess(`Imported ${mapped.length} questions from JSON.`);
         } catch (e) {
