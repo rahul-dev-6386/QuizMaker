@@ -96,6 +96,10 @@ export default function Dashboard() {
         return 'Good evening';
     };
 
+    const getAttemptTitle = (attempt) => attempt.displayTitle || attempt.quizId?.title || 'Quiz';
+    const getAttemptTopic = (attempt) => attempt.topicLabel || attempt.quizId?.category || '—';
+    const isRandomAttempt = (attempt) => attempt.attemptMode === 'random';
+
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -188,10 +192,10 @@ export default function Dashboard() {
                                 {attempts.map((a) => (
                                     <tr key={a._id}>
                                         <td style={{ fontWeight: 600 }}>
-                                            {a.quizId?.title || 'Quiz'}
+                                            {getAttemptTitle(a)}
                                         </td>
                                         <td>
-                                            <span className="tag">{a.quizId?.category || '—'}</span>
+                                            <span className="badge badge-primary">{getAttemptTopic(a)}</span>
                                         </td>
                                         <td>
                                             <ScoreBadge score={a.score} total={a.answers?.length || 0} />
@@ -220,12 +224,14 @@ export default function Dashboard() {
                                                 >
                                                     Analysis
                                                 </button>
-                                                <button
-                                                    className="btn btn-ghost btn-sm"
-                                                    onClick={() => navigate(`/leaderboard/${a.quizId?._id}`)}
-                                                >
-                                                    Leaderboard
-                                                </button>
+                                                {!isRandomAttempt(a) && a.quizId?._id && (
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
+                                                        onClick={() => navigate(`/leaderboard/${a.quizId?._id}`)}
+                                                    >
+                                                        Leaderboard
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

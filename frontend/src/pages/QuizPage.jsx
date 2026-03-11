@@ -121,6 +121,7 @@ export default function QuizPage() {
             : 'var(--success)';
 
     const answeredCount = Object.values(selected).filter((v) => v !== undefined).length;
+    const isRandomAttempt = !selectedQuizId;
 
     const statusCounts = useMemo(() => {
         const counts = {
@@ -142,6 +143,9 @@ export default function QuizPage() {
             answer: selected[q.questionId] !== undefined ? String(selected[q.questionId]) : '',
         })),
         quizId: quizMeta?.quizId,
+        attemptMode: isRandomAttempt ? 'random' : 'quiz',
+        displayTitle: isRandomAttempt ? 'Random Quiz' : '',
+        topicLabel: isRandomAttempt ? 'Random' : '',
     });
 
     const executeSubmit = async () => {

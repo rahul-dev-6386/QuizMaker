@@ -162,6 +162,8 @@ export default function ResultsPage() {
 
     const finalScore = report?.score ?? score ?? 0;
     const finalTotal = report?.total ?? total ?? 0;
+    const displayTitle = report?.displayTitle || report?.quiz?.title || 'Quiz';
+    const displayTopic = report?.topicLabel || report?.quiz?.category || 'General';
     const pct = finalTotal ? Math.round((finalScore / finalTotal) * 100) : 0;
     const grade = pct >= 90 ? { label: 'Excellent Performance', color: 'var(--success)' }
         : pct >= 70 ? { label: 'Solid Effort', color: 'var(--primary)' }
@@ -215,6 +217,40 @@ Explain why answers could be wrong, the key concept, and a short memory tip.`;
 
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem', maxWidth: '1360px' }}>
+            <div
+                className="card"
+                style={{
+                    marginBottom: '1.25rem',
+                    padding: '1rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '1rem',
+                    flexWrap: 'wrap',
+                }}
+            >
+                <div>
+                    <div style={{ fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                        Assessment
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: 700 }}>{displayTitle}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span className="badge badge-primary">{displayTopic}</span>
+                    {report?.submittedAt && (
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                            {new Date(report.submittedAt).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </span>
+                    )}
+                </div>
+            </div>
+
             {/* Score Card */}
             <div className="card" style={{
                 textAlign: 'center', marginBottom: '2rem',

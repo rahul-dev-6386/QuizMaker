@@ -27,7 +27,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
-  if (!user) return <Navigate to="/signin" replace />;
+  if (!user) return <Navigate to="/" replace />;
   if (adminOnly && user.role !== 'admin') return <Navigate to="/admin-auth" replace />;
   return children;
 }

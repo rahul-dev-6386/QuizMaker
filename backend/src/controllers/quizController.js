@@ -63,7 +63,7 @@ export async function quizGenerator(req, res) {
 }
 
 export async function submitQuiz(req, res) {
-  const { answers, quizId } = req.body;
+  const { answers, quizId, attemptMode, displayTitle, topicLabel } = req.body;
 
   if (!quizId || !mongoose.Types.ObjectId.isValid(quizId)) {
     return res.status(400).json({ message: "Valid quizId is required" });
@@ -104,12 +104,31 @@ export async function submitQuiz(req, res) {
       if (question && question.correctAnswer === ans.answer) score++;
     });
 
-    const attempt = await Attempt.create({ userId: req.userId, quizId, answers, score });
+    const normalizedMode = attemptMode === "random" ? "random" : "quiz";
+    const normalizedDisplayTitle =
+      normalizedMode === "random"
+        ? String(displayTitle || "Random Quiz").trim()
+        : String(displayTitle || "").trim();
+    const normalizedTopicLabel =
+      normalizedMode === "random"
+        ? String(topicLabel || "Random").trim()
+        : String(topicLabel || "").trim();
+
+    const attempt = await Attempt.create({
+      userId: req.userId,
+      quizId,
+      attemptMode: normalizedMode,
+      displayTitle: normalizedDisplayTitle,
+      topicLabel: normalizedTopicLabel,
+      answers,
+      score,
+    });
 
     return res.json({
       score,
       total: answers.length,
       attemptId: attempt._id,
+      attemptMode: attempt.attemptMode,
       message: "Quiz submitted successfully",
     });
   } catch {
@@ -166,6 +185,11 @@ export async function getAttemptReport(req, res) {
 
     return res.json({
       attemptId: attempt._id,
+      attemptMode: attempt.attemptMode || "quiz",
+      displayTitle:
+        attempt.displayTitle || attempt.quizId?.title || "Quiz",
+      topicLabel:
+        attempt.topicLabel || attempt.quizId?.category || "General",
       quiz: attempt.quizId
         ? {
             id: attempt.quizId._id,

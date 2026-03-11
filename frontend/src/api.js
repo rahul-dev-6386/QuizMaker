@@ -24,7 +24,7 @@ API.interceptors.response.use(
             if (msg.includes('expired') || msg.includes('invalid')) {
                 localStorage.removeItem('qm_token');
                 localStorage.removeItem('qm_user');
-                window.location.href = '/signin';
+                window.location.href = '/';
             }
         }
         return Promise.reject(err);
