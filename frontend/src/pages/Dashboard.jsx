@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAllQuizzes, getDashboardStats, getAttempts } from '../api';
 import { useAuth } from '../context/AuthContext';
-import { ChartIcon, DashboardIcon, QuizIcon, TargetIcon, TrophyIcon } from '../components/Icons';
+import { ChartIcon, DashboardIcon, QuizIcon, TrophyIcon } from '../components/Icons';
 
 function StatCard({ icon, label, value, sub, color }) {
     return (
@@ -145,9 +145,10 @@ export default function Dashboard() {
                     color="cyan"
                 />
                 <StatCard
-                    icon={<TargetIcon size={18} />}
-                    label="Rank"
-                    value={stats?.totalQuizzes > 0 ? 'Active' : 'New'}
+                    icon={<ChartIcon size={18} />}
+                    label="Average Score"
+                    value={`${Math.round(stats?.averageScore ?? 0)}`}
+                    sub={stats?.totalQuizzes ? 'Across all attempts' : 'No attempts yet'}
                     color="emerald"
                 />
             </div>
