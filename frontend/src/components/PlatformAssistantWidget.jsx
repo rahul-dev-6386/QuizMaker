@@ -53,72 +53,34 @@ export default function PlatformAssistantWidget() {
     };
 
     return (
-        <div style={{ position: 'fixed', right: 18, bottom: 18, zIndex: 240 }}>
+        <div className="assistant-widget-shell">
             {open && (
-                <div
-                    className="card"
-                    style={{
-                        width: 360,
-                        maxWidth: 'calc(100vw - 24px)',
-                        marginBottom: '0.75rem',
-                        padding: 0,
-                        overflow: 'hidden',
-                    }}
-                >
-                    <div
-                        style={{
-                            padding: '0.75rem 0.9rem',
-                            borderBottom: '1px solid var(--border)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                        }}
-                    >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="assistant-widget-panel">
+                    <div className="assistant-widget-header">
+                        <div className="assistant-widget-title">
                             <BotIcon size={16} />
-                            <strong style={{ fontSize: '0.95rem' }}>Assistant</strong>
+                            <div>
+                                <strong>Platform Assistant</strong>
+                                <div className="assistant-widget-subtitle">Quiz, reports, attempts, and score insights</div>
+                            </div>
                         </div>
                         <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
                             Close
                         </button>
                     </div>
 
-                    <div
-                        style={{
-                            maxHeight: 330,
-                            overflowY: 'auto',
-                            padding: '0.8rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '0.6rem',
-                            background: 'var(--bg-base)',
-                        }}
-                    >
+                    <div className="assistant-widget-messages">
                         {messages.map((m, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                                    background: m.role === 'user' ? 'var(--primary)' : 'var(--bg-surface)',
-                                    color: m.role === 'user' ? '#fff' : 'var(--text-primary)',
-                                    border: m.role === 'user' ? 'none' : '1px solid var(--border)',
-                                    borderRadius: 8,
-                                    padding: '0.6rem 0.75rem',
-                                    fontSize: '0.83rem',
-                                    maxWidth: '95%',
-                                    whiteSpace: 'pre-wrap',
-                                    fontFamily: 'var(--font-base)',
-                                }}
-                            >
+                            <div key={i} className={`assistant-widget-bubble ${m.role === 'user' ? 'user' : 'bot'}`}>
                                 {m.text}
                             </div>
                         ))}
                     </div>
 
-                    <div style={{ padding: '0.7rem', borderTop: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
+                    <div className="assistant-widget-footer">
+                        <div className="assistant-widget-actions">
                             {quickActions.map((q) => (
-                                <button key={q} className="btn btn-ghost btn-sm" onClick={() => askAssistant(q)}>
+                                <button key={q} className="assistant-quick-action" onClick={() => askAssistant(q)}>
                                     {q}
                                 </button>
                             ))}
@@ -128,14 +90,13 @@ export default function PlatformAssistantWidget() {
                                 e.preventDefault();
                                 askAssistant(input);
                             }}
-                            style={{ display: 'flex', gap: '0.45rem' }}
+                            className="assistant-widget-form"
                         >
                             <input
                                 className="form-input"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Ask platform task..."
-                                style={{ flex: 1, fontSize: '0.85rem' }}
+                                placeholder="Ask about your quizzes, attempts, or reports"
                             />
                             <button className="btn btn-primary btn-sm" type="submit" disabled={loading}>
                                 {loading ? '...' : 'Send'}
@@ -146,18 +107,8 @@ export default function PlatformAssistantWidget() {
             )}
 
             <button
-                className="btn btn-primary"
+                className="assistant-widget-trigger"
                 onClick={() => setOpen((v) => !v)}
-                style={{
-                    borderRadius: '999px',
-                    width: 52,
-                    height: 52,
-                    padding: 0,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: 'var(--shadow-lg)',
-                }}
                 title="Open Assistant"
             >
                 <BotIcon size={18} />

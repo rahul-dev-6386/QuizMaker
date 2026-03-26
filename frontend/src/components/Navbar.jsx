@@ -26,8 +26,8 @@ export default function Navbar() {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/');
         setDropdownOpen(false);
     };

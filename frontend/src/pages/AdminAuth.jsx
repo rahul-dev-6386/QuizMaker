@@ -3,13 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { authenticateAdmin } from '../api';
 import { useAuth } from '../context/AuthContext';
 
-function parseJwt(token) {
-    try {
-        const payload = token.split('.')[1];
-        return JSON.parse(atob(payload));
-    } catch { return {}; }
-}
-
 export default function AdminAuth() {
     const { login, user } = useAuth();
     const navigate = useNavigate();
@@ -28,16 +21,7 @@ export default function AdminAuth() {
         setLoading(true);
         try {
             const res = await authenticateAdmin({ key: key.trim() });
-            const { token, user: updatedUser } = res.data;
-
-            // Re-login with the new admin token
-            const payload = parseJwt(token);
-            login(token, {
-                id: payload.id,
-                role: payload.role,
-                name: updatedUser.name,
-                email: updatedUser.email
-            });
+            login(res.data.user);
 
             navigate('/admin');
         } catch (err) {

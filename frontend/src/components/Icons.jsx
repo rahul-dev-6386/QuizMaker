@@ -82,6 +82,26 @@ export function ChartIcon({ size = 18 }) {
     );
 }
 
+export function ShieldIcon({ size = 18 }) {
+    return (
+        <Svg size={size}>
+            <path d="M12 3l7 3v5c0 4.5-2.8 7.6-7 10-4.2-2.4-7-5.5-7-10V6l7-3Z" />
+            <path d="m9.5 12 1.8 1.8 3.7-4" />
+        </Svg>
+    );
+}
+
+export function KeyIcon({ size = 18 }) {
+    return (
+        <Svg size={size}>
+            <circle cx="8" cy="15" r="3" />
+            <path d="M10.5 13.5 20 4" />
+            <path d="M17 4h3v3" />
+            <path d="M15 6l3 3" />
+        </Svg>
+    );
+}
+
 export function TrophyIcon({ size = 18 }) {
     return (
         <Svg size={size}>
@@ -100,4 +120,3 @@ export function TargetIcon({ size = 18 }) {
         </Svg>
     );
 }
-

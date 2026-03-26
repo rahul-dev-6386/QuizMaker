@@ -5,35 +5,67 @@ const API_BASE_URL =
 
 const API = axios.create({
     baseURL: API_BASE_URL,
+    withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token to every request
-API.interceptors.request.use((config) => {
-    const token = localStorage.getItem('qm_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-});
+let refreshPromise = null;
+let authExpiredDispatched = false;
 
-// Handle 403 globally — logout if token expired
+function shouldSkipRefresh(url = '') {
+    return [
+        '/signin',
+        '/signup',
+        '/forgot-password',
+        '/reset-password',
+        '/auth/logout',
+    ].some((path) => url.includes(path));
+}
+
 API.interceptors.response.use(
-    (res) => res,
-    (err) => {
-        if (err.response?.status === 403) {
-            const msg = err.response?.data?.message || '';
-            if (msg.includes('expired') || msg.includes('invalid')) {
-                localStorage.removeItem('qm_token');
-                localStorage.removeItem('qm_user');
-                window.location.href = '/';
+    (res) => {
+        authExpiredDispatched = false;
+        return res;
+    },
+    async (err) => {
+        const originalRequest = err.config || {};
+        const status = err.response?.status;
+        const isRefreshCall = originalRequest.url?.includes('/auth/refresh');
+        const skipRefresh = shouldSkipRefresh(originalRequest.url);
+
+        if (status === 401 && !originalRequest._retry && !isRefreshCall && !skipRefresh) {
+            originalRequest._retry = true;
+
+            try {
+                if (!refreshPromise) {
+                    refreshPromise = API.post('/auth/refresh').finally(() => {
+                        refreshPromise = null;
+                    });
+                }
+
+                await refreshPromise;
+                return API(originalRequest);
+            } catch {
+                if (!authExpiredDispatched) {
+                    authExpiredDispatched = true;
+                    window.dispatchEvent(new CustomEvent('auth:expired'));
+                }
             }
         }
+
         return Promise.reject(err);
     }
 );
 
 /* ——— Auth ——— */
-export const signup = (data) => API.post('/signup', data);
+export const requestSignupOtp = (data) => API.post('/signup/request-otp', data);
+export const verifySignupOtp = (data) => API.post('/signup/verify-otp', data);
 export const signin = (data) => API.post('/signin', data);
+export const requestForgotPasswordOtp = (data) => API.post('/forgot-password/request-otp', data);
+export const resetForgotPassword = (data) => API.post('/forgot-password/reset', data);
+export const refreshSession = () => API.post('/auth/refresh');
+export const getCurrentUser = () => API.get('/auth/me');
+export const logoutSession = () => API.post('/auth/logout');
 
 /* ——— Quizzes ——— */
 export const getAllQuizzes = () => API.get('/quizzes');

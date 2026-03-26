@@ -10,9 +10,11 @@ const UserSchema = new mongoose.Schema({
     default: "local",
   },
   oauthSubject: { type: String, default: null },
-  isVerified: { type: Boolean, default: true },
-  otpCodeHash: { type: String, default: null },
-  otpExpiresAt: { type: Date, default: null },
+  isVerified: { type: Boolean, default: false },
+  refreshTokens: {
+    type: [String],
+    default: [],
+  },
   role: {
     type: String,
     enum: ["user", "admin"],

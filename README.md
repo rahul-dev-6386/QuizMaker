@@ -1,6 +1,6 @@
 # QuizMaster Monorepo
 
-QuizMaster is a full-stack quiz platform with authentication, quiz attempts, leaderboard tracking, admin quiz management, and an AI-powered analysis assistant.
+QuizMaster is a full-stack quiz platform with OTP-verified authentication, cookie-based sessions, quiz attempts, leaderboard tracking, admin quiz management, and an AI-powered analysis assistant.
 
 This repository contains:
 - `backend`: Node.js + Express + MongoDB REST API
@@ -27,7 +27,9 @@ project/
 
 ## Core Product Features
 
-- User signup/signin with JWT-based sessions
+- OTP-based signup verification
+- Forgot-password flow with OTP verification
+- Access token + refresh token session flow with secure cookies
 - Role-based access (`user` and `admin`)
 - Quiz listing and randomized question generation
 - Quiz submission with scoring and retake flow
@@ -47,15 +49,21 @@ project/
 - `src/app.js`: Express app wiring and route registration
 - `src/routes/*`: route-to-controller mapping
 - `src/controllers/*`: business logic and response handling
-- `src/middleware/auth.js`: JWT verification and admin-role guard
+- `src/middleware/auth.js`: access-token verification from cookies or bearer header and admin-role guard
 - `src/models/*`: MongoDB schemas for Users, Quiz, Attempt
 - `src/services/geminiService.js`: Gemini API integration with model fallback/cache
 
 ### Main API Groups
 
 - Auth
-- `POST /signup`
+- `POST /signup/request-otp`
+- `POST /signup/verify-otp`
 - `POST /signin`
+- `POST /forgot-password/request-otp`
+- `POST /forgot-password/reset`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/me`
 - `POST /admin/authenticate`
 
 - Quiz
@@ -86,8 +94,10 @@ project/
 ## Security Features (Implemented)
 
 - Password hashing with `bcrypt`
-- JWT token auth with expiry (`1h`)
-- Protected routes via `Bearer` token middleware
+- OTP-gated signup and OTP-based password reset
+- Short-lived access token + long-lived refresh token flow
+- Cookie-based auth with `HttpOnly` session cookies
+- Protected routes via access-token middleware
 - Admin-only route protection using role checks
 - Input validation with `zod` (auth payloads) and controller-side checks
 - ObjectId validation before destructive/lookup operations
@@ -97,13 +107,14 @@ project/
 
 ## Security Hardening Recommendations
 
-- Set a strong `JWT_SECRET` and rotate if ever exposed
+- Set a strong `ACCESS_SECRET` and rotate if ever exposed
 - Set a strong `ADMIN_AUTH_KEY` and rotate if ever exposed
 - Set `ADMIN_SECRET` explicitly in `.env` (avoid relying on default fallback)
-- Restrict CORS origin from `*` to trusted frontend domains in production
+- Set `CLIENT_ORIGIN` to the exact frontend origin in production
+- Set `COOKIE_SECURE=true` in production so auth cookies are HTTPS-only
 - Add rate limiting for auth and admin endpoints
 - Add request logging and centralized error handling
-- Add refresh token or shorter token lifetime strategy for production
+- Replace the current console OTP delivery with a real SMTP mail transport
 
 ## Prerequisites
 
@@ -123,11 +134,32 @@ Create `backend/.env`:
 ```env
 PORT=3000
 MONGO_URL=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
+ACCESS_SECRET=your_access_secret
+REFRESH_SECRET=your_refresh_secret
 ADMIN_AUTH_KEY=your_admin_auth_key
 ADMIN_SECRET=your_admin_secret
 GEMINI_API_KEY=optional_gemini_api_key
+CLIENT_ORIGIN=http://localhost:5173
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+OTP_EXPIRES_MINUTES=10
+COOKIE_SECURE=false
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email_username
+SMTP_PASS=your_email_password
+MAIL_FROM=no-reply@example.com
 ```
+
+Auth flow now works like this:
+- User signs up by submitting name, email, and password.
+- Backend generates an OTP and stores its hash with an expiry.
+- User verifies the OTP to activate the account.
+- Backend issues a short-lived access token and a longer-lived refresh token in cookies.
+- When the access token expires, the frontend calls `/auth/refresh` automatically using the refresh token cookie.
+- Forgot password follows the same OTP pattern before the password is changed.
+
+Note: OTP delivery currently logs the OTP on the backend server console for development, and also returns `otpPreview` outside production. That keeps the flow usable until you wire your real email credentials in `.env` and replace the delivery logic.
 
 Run backend:
 
@@ -151,7 +183,8 @@ This repo includes a root `render.yaml` blueprint for backend deployment.
 4. Render will detect `render.yaml` and create `quizmaster-backend`.
 5. In Render service settings, set environment variables:
    - `MONGO_URL`
-   - `JWT_SECRET`
+   - `ACCESS_SECRET`
+   - `REFRESH_SECRET`
    - `ADMIN_AUTH_KEY`
    - `ADMIN_SECRET`
    - `GEMINI_API_KEY` (optional)
@@ -170,7 +203,7 @@ npm run dev
 
 Vite usually starts on `http://localhost:5173`.
 
-Note: frontend API base URL comes from `VITE_API_BASE_URL` in `frontend/src/api.js` (falls back to `http://localhost:3000` for local development).
+Note: frontend API base URL comes from `VITE_API_BASE_URL` in `frontend/src/api.js` (falls back to `http://localhost:3000` for local development). The frontend now sends requests with credentials enabled, so `CLIENT_ORIGIN` on the backend must match the frontend origin.
 Set frontend env vars in deployment:
 
 ```env

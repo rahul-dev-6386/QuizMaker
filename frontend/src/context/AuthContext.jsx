@@ -1,45 +1,57 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getCurrentUser, logoutSession } from '../api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const storedToken = localStorage.getItem('qm_token');
-        const storedUser = localStorage.getItem('qm_user');
-        if (storedToken && storedUser) {
+        let mounted = true;
+
+        const bootstrapAuth = async () => {
             try {
-                setToken(storedToken);
-                setUser(JSON.parse(storedUser));
+                const res = await getCurrentUser();
+                if (mounted) setUser(res.data.user || null);
             } catch {
-                localStorage.removeItem('qm_token');
-                localStorage.removeItem('qm_user');
+                if (mounted) setUser(null);
+            } finally {
+                if (mounted) setLoading(false);
             }
-        }
-        setLoading(false);
+        };
+
+        bootstrapAuth();
+
+        const handleExpired = () => {
+            if (mounted) setUser(null);
+        };
+
+        window.addEventListener('auth:expired', handleExpired);
+
+        return () => {
+            mounted = false;
+            window.removeEventListener('auth:expired', handleExpired);
+        };
     }, []);
 
-    const login = (token, userData) => {
-        localStorage.setItem('qm_token', token);
-        localStorage.setItem('qm_user', JSON.stringify(userData));
-        setToken(token);
+    const login = (userData) => {
         setUser(userData);
     };
 
-    const logout = () => {
-        localStorage.removeItem('qm_token');
-        localStorage.removeItem('qm_user');
-        setToken(null);
+    const logout = async () => {
+        try {
+            await logoutSession();
+        } catch {
+            // Ignore logout API errors and still clear local state.
+        }
         setUser(null);
     };
 
     const isAdmin = user?.role === 'admin';
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAdmin, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, isAdmin, loading }}>
             {children}
         </AuthContext.Provider>
     );

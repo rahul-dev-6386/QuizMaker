@@ -3,20 +3,26 @@ import { env } from "../config/env.js";
 
 export function auth(req, res, next) {
   const authHeader = req.headers.authorization;
+  const cookieToken = req.headers.cookie
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("accessToken="))
+    ?.split("=")[1];
+  const accessToken =
+    (authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null) ||
+    cookieToken;
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(403).json({ message: "Invalid authorization header" });
+  if (!accessToken) {
+    return res.status(401).json({ message: "Authentication required" });
   }
 
-  const token = authHeader.split(" ")[1];
-
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET);
+    const decoded = jwt.verify(accessToken, env.ACCESS_SECRET);
     req.userId = decoded.id;
     req.role = decoded.role;
     next();
   } catch {
-    return res.status(403).json({ message: "Token expired or invalid" });
+    return res.status(401).json({ message: "Token expired or invalid" });
   }
 }
 

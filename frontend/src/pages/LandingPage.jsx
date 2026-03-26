@@ -1,139 +1,222 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BotIcon, ChartIcon, LogoIcon, QuizIcon, TrophyIcon } from '../components/Icons';
+import { BotIcon, ChartIcon, KeyIcon, LogoIcon, QuizIcon, ShieldIcon } from '../components/Icons';
 
 const FEATURES = [
     {
         icon: QuizIcon,
-        title: 'Adaptive Testing',
-        desc: 'Dynamically generated assessments that adapt to your knowledge level across diverse categories.',
+        title: 'Structured Assessments',
+        desc: 'Create and attempt focused quizzes with a cleaner flow for practice, review, and repeat attempts.',
     },
     {
         icon: BotIcon,
-        title: 'AI-Powered Insights',
-        desc: 'Receive immediate, detailed explanations for incorrect answers powered by Google Gemini.',
-    },
-    {
-        icon: TrophyIcon,
-        title: 'Global Leaderboards',
-        desc: 'Track your performance and benchmark your scores against learners worldwide.',
+        title: 'AI Answer Review',
+        desc: 'Get concise explanations for missed questions so learners can understand mistakes faster.',
     },
     {
         icon: ChartIcon,
-        title: 'Performance Analytics',
-        desc: 'Visualize your progress over time with comprehensive dashboard statistics and attempt histories.',
+        title: 'Progress Visibility',
+        desc: 'Track attempts, scores, and performance trends through a straightforward dashboard experience.',
     },
 ];
 
+const PANEL_FEATURES = [
+    { icon: ShieldIcon, label: 'Protected access with OTP verification' },
+    { icon: KeyIcon, label: 'Long-lived sessions backed by refresh tokens' },
+    { icon: ChartIcon, label: 'Clear performance visibility after every attempt' },
+];
+
+const SOCIAL_AVATARS = ['AL', 'RK', 'PM', 'DS'];
+
 export default function LandingPage() {
+    const fullAccentText = 'Improve with confidence.';
+    const [typedAccent, setTypedAccent] = useState('');
+    const [navScrolled, setNavScrolled] = useState(false);
+
+    useEffect(() => {
+        let frame;
+        let index = 0;
+
+        const tick = () => {
+            index += 1;
+            setTypedAccent(fullAccentText.slice(0, index));
+            if (index < fullAccentText.length) {
+                frame = window.setTimeout(tick, 45);
+            }
+        };
+
+        frame = window.setTimeout(tick, 240);
+
+        return () => window.clearTimeout(frame);
+    }, []);
+
+    useEffect(() => {
+        const handleScroll = () => setNavScrolled(window.scrollY > 16);
+        handleScroll();
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+            },
+            { threshold: 0.16 }
+        );
+
+        const items = document.querySelectorAll('[data-reveal]');
+        items.forEach((item) => observer.observe(item));
+
+        return () => observer.disconnect();
+    }, []);
+
+    const navClassName = useMemo(
+        () => `navbar landing-navbar${navScrolled ? ' landing-navbar-scrolled' : ''}`,
+        [navScrolled]
+    );
+
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            {/* ——— Header ——— */}
-            <header className="navbar" style={{ position: 'static' }}>
+        <div className="landing-shell">
+            <div className="page-noise" />
+            <div className="landing-orb left" />
+            <div className="landing-orb right" />
+            <div className="landing-mesh" />
+            <header className={navClassName}>
                 <div className="navbar-inner">
                     <Link to="/" className="navbar-logo">
                         <div className="navbar-logo-icon" style={{ fontSize: '1rem' }}><LogoIcon size={16} /></div>
                         <span>QuizMaster</span>
                     </Link>
+                    <div className="landing-nav-links">
+                        <a href="#features" className="landing-nav-link active">Overview</a>
+                        <a href="#features" className="landing-nav-link">Features</a>
+                        <Link to="/signin" className="landing-nav-link">Sign In</Link>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                        <Link to="/signin" className="btn btn-ghost" style={{ fontWeight: 600 }}>Sign In</Link>
-                        <Link to="/signup" className="btn btn-primary">Get Started</Link>
+                        <Link to="/signup" className="btn btn-primary landing-cta-pill">Get Started</Link>
                     </div>
                 </div>
             </header>
 
-            {/* ——— Hero Section ——— */}
-            <section style={{
-                padding: '6rem 1.5rem',
-                textAlign: 'center',
-                background: 'var(--bg-base)',
-                borderBottom: '1px solid var(--border)'
-            }}>
-                <div className="container" style={{ maxWidth: '800px' }}>
-                    <div className="badge badge-primary" style={{ marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-                        Enterprise-Grade Assessment Platform
+            <section className="landing-grid">
+                <div className="landing-hero">
+                    <div className="landing-panel landing-copy reveal-up is-visible">
+                        <div className="eyebrow">Professional Quiz Platform</div>
+                        <h1 className="landing-title">
+                            Assess clearly.
+                            <span className="landing-title-accent landing-title-accent-typed">
+                                {typedAccent}
+                                <span className="landing-caret" />
+                            </span>
+                        </h1>
+                        <p className="landing-description">
+                            QuizMaster is built for teams and learners who need a focused assessment experience,
+                            secure account access, and clear feedback after every quiz attempt.
+                        </p>
+
+                        <div className="landing-actions">
+                            <Link to="/signup" className="btn btn-primary btn-lg landing-glow-cta">
+                                Get Started
+                            </Link>
+                            <Link to="/signin" className="btn btn-secondary btn-lg">
+                                Sign In
+                            </Link>
+                        </div>
+
+                        <div className="landing-social-proof">
+                            <div className="landing-avatar-stack">
+                                {SOCIAL_AVATARS.map((avatar) => (
+                                    <span key={avatar} className="landing-avatar">{avatar}</span>
+                                ))}
+                            </div>
+                            <span>Trusted by 10,000+ learners</span>
+                        </div>
+
+                        <div className="landing-meta">
+                            <div className="landing-meta-card" data-reveal>
+                                <div className="landing-feature-icon"><ShieldIcon size={18} /></div>
+                                <div className="landing-meta-value">Secure</div>
+                                <div className="landing-meta-label">OTP-based signup and recovery</div>
+                            </div>
+                            <div className="landing-meta-card" data-reveal>
+                                <div className="landing-feature-icon"><QuizIcon size={18} /></div>
+                                <div className="landing-meta-value">Clear</div>
+                                <div className="landing-meta-label">Simple quiz and review workflow</div>
+                            </div>
+                            <div className="landing-meta-card" data-reveal>
+                                <div className="landing-feature-icon"><ChartIcon size={18} /></div>
+                                <div className="landing-meta-value">Trackable</div>
+                                <div className="landing-meta-label">Results, attempts, and progress insight</div>
+                            </div>
+                        </div>
                     </div>
-                    <h1 style={{
-                        fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                        fontWeight: 800,
-                        lineHeight: 1.1,
-                        letterSpacing: '-0.03em',
-                        marginBottom: '1.5rem',
-                        color: 'var(--text-primary)'
-                    }}>
-                        Assess Knowledge with
-                        <span style={{ color: 'var(--primary)' }}> Intelligent Precision</span>
-                    </h1>
-                    <p style={{
-                        fontSize: '1.125rem',
-                        color: 'var(--text-secondary)',
-                        marginBottom: '2.5rem',
-                        lineHeight: 1.7,
-                        maxWidth: '600px',
-                        margin: '0 auto 2.5rem'
-                    }}>
-                        A robust testing environment combining rigorous question banks with immediate AI-driven feedback to accelerate professional learning and development.
-                    </p>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                        <Link to="/signup" className="btn btn-primary btn-lg" style={{ fontSize: '1.125rem', padding: '1rem 2.5rem' }}>
-                            Create Free Account
-                        </Link>
-                        <Link to="/signin" className="btn btn-secondary btn-lg" style={{ fontSize: '1.125rem', padding: '1rem 2.5rem' }}>
-                            Log In
-                        </Link>
+
+                    <div className="landing-panel landing-side reveal-up" data-reveal>
+                        <div className="landing-side-card landing-glass-card">
+                            <div className="badge badge-success landing-glow-badge">Built For Reliable Usage</div>
+                            <div className="landing-side-title" style={{ marginTop: '1rem', fontSize: '1.4rem' }}>
+                                A more credible frontend for real assessment workflows
+                            </div>
+                            <p className="landing-side-copy">
+                                The platform focuses on the essentials: secure authentication, quiz delivery,
+                                review after submission, and progress visibility without unnecessary product noise.
+                            </p>
+                            <div className="landing-checklist">
+                                {PANEL_FEATURES.map((item) => (
+                                    <div key={item.label} className="landing-check">
+                                        <span className="landing-check-icon"><item.icon size={16} /></span>
+                                        <span>{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="landing-side-card landing-side-card-soft">
+                            <div className="landing-side-title">Designed to stay readable and calm</div>
+                            <p className="landing-side-copy">
+                                The interface is kept intentionally restrained so users can move from login to quiz to review
+                                without distraction on desktop or mobile.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* ——— Features Section ——— */}
-            <section style={{ padding: '6rem 1.5rem', background: 'var(--bg-subtle)', flex: 1 }}>
-                <div className="container">
-                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 style={{ fontSize: '2.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
-                            Comprehensive Testing Architecture
+            <section className="landing-feature-section" id="features">
+                <div className="landing-feature-frame reveal-up" data-reveal>
+                    <div style={{ maxWidth: '640px' }}>
+                        <div className="eyebrow">Core Capabilities</div>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 4vw, 3rem)', marginTop: '1rem' }}>
+                            Only the features that matter most
                         </h2>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', maxWidth: '600px', margin: '0 auto' }}>
-                            Built for educators, professionals, and avid learners who demand accuracy and actionable analytics.
+                        <p style={{ marginTop: '0.9rem', color: 'var(--text-secondary)', fontSize: '1rem', lineHeight: 1.75 }}>
+                            QuizMaster is positioned around a smaller set of product strengths instead of a long feature list:
+                            secure access, structured assessments, and useful post-quiz review.
                         </p>
                     </div>
 
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                        gap: '2rem'
-                    }}>
+                    <div className="landing-feature-grid">
                         {FEATURES.map((f, i) => (
-                            <div key={i} className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '2rem' }}>
-                                <div style={{
-                                    width: '48px',
-                                    height: '48px',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'var(--primary-light)',
-                                    color: 'var(--primary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: '1.5rem'
-                                }}>
+                            <div key={i} className="landing-feature-card" data-reveal>
+                                <div className="landing-feature-icon landing-feature-icon-lg">
                                     <f.icon size={20} />
                                 </div>
-                                <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-                                    {f.title}
-                                </h3>
-                                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.95rem' }}>
-                                    {f.desc}
-                                </p>
+                                <h3>{f.title}</h3>
+                                <p>{f.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* ——— Footer ——— */}
             <footer style={{
                 padding: '3rem 1.5rem',
-                background: 'var(--bg-surface)',
-                borderTop: '1px solid var(--border)',
+                borderTop: '1px solid rgba(255,255,255,0.35)',
                 textAlign: 'center',
                 color: 'var(--text-muted)'
             }}>
