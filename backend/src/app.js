@@ -12,7 +12,9 @@ const app = express();
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || env.CLIENT_ORIGINS.includes(origin)) {
+      const normalizedOrigin = origin ? origin.replace(/\/+$/, "") : origin;
+
+      if (!normalizedOrigin || env.CLIENT_ORIGINS.includes(normalizedOrigin)) {
         return callback(null, true);
       }
       return callback(new Error("CORS origin not allowed"));

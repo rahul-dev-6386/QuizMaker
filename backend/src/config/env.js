@@ -9,9 +9,22 @@ dotenv.config({ path: path.join(__dirname, "../../.env"), quiet: true });
 
 const accessSecret = process.env.ACCESS_SECRET;
 const refreshSecret = process.env.REFRESH_SECRET;
+
+function normalizeOrigin(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+    return url.origin;
+  } catch {
+    return raw.replace(/\/+$/, "");
+  }
+}
+
 const clientOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173,http://127.0.0.1:5173")
   .split(",")
-  .map((origin) => origin.trim())
+  .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
 const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER || "";
 const mailAppPassword =
@@ -34,7 +47,7 @@ if (!refreshSecret) {
 }
 
 export function getCookieOptions(req) {
-  const requestOrigin = req.headers.origin;
+  const requestOrigin = normalizeOrigin(req.headers.origin);
   const isCrossOrigin = Boolean(requestOrigin && !clientOrigins.includes(requestOrigin));
   const secure = env.COOKIE_SECURE || Boolean(requestOrigin && requestOrigin.startsWith("https://"));
 
