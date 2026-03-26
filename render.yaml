@@ -14,11 +14,25 @@ services:
         value: 10000
       - key: MONGO_URL
         sync: false
-      - key: JWT_SECRET
+      - key: ACCESS_SECRET
+        sync: false
+      - key: REFRESH_SECRET
         sync: false
       - key: ADMIN_AUTH_KEY
         sync: false
       - key: ADMIN_SECRET
         sync: false
       - key: GEMINI_API_KEY
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: NODE_ENV
+        value: production
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
         sync: false
