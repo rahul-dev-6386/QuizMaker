@@ -151,6 +151,7 @@ export async function signupHandler(req, res) {
         }),
       });
     } catch (err) {
+      console.error("Signup OTP email send failed:", err);
       await Otp.deleteMany({ email, purpose: "signup" });
       return res.status(500).json({ message: "Failed to send OTP" });
     }
@@ -411,7 +412,8 @@ export async function forgotPasswordHandler(req, res) {
           note: "Enter this code on the reset-password screen and choose a new secure password.",
         }),
       });
-    } catch {
+    } catch (err) {
+      console.error("Forgot-password OTP email send failed:", err);
       await Otp.deleteMany({ email: parsed.data.email, purpose: "password-reset" });
       return res.status(500).json({ message: "Error sending OTP" });
     }
