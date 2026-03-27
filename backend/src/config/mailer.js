@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { env } from "./env.js";
 
 let transporter;
+const MAIL_TIMEOUT_MS = Number(process.env.MAIL_TIMEOUT_MS || 45000);
 
 function getTransporter() {
   if (transporter) return transporter;
@@ -14,6 +15,9 @@ function getTransporter() {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: Number(env.SMTP_PORT) === 465,
+    connectionTimeout: MAIL_TIMEOUT_MS,
+    greetingTimeout: MAIL_TIMEOUT_MS,
+    socketTimeout: MAIL_TIMEOUT_MS,
     auth: {
       user: env.SMTP_USER,
       pass: env.SMTP_PASS,
@@ -40,7 +44,10 @@ export async function sendMailWithTimeout({ to, subject, text, html }) {
       html,
     }),
     new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Email send timeout after 15 seconds")), 15000);
+      setTimeout(
+        () => reject(new Error(`Email send timeout after ${MAIL_TIMEOUT_MS / 1000} seconds`)),
+        MAIL_TIMEOUT_MS
+      );
     }),
   ]);
 
