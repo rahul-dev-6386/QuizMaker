@@ -214,7 +214,7 @@ export function setupSocketServer(server) {
         }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
         console.log("Client disconnected:", socket.id);
         // Remove from queues
         for (const cat in queues) {
