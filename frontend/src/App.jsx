@@ -30,7 +30,7 @@ function ProtectedRoute({ children, adminOnly = false }) {
   }
 
   if (!user) {
-    return <Navigate to="/signin" replace state={{ from: location }} />;
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
   if (adminOnly && user.role !== 'admin') return <Navigate to="/admin-auth" replace />;
   return children;

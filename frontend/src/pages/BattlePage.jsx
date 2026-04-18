@@ -27,7 +27,8 @@ export default function BattlePage() {
         players: [],
         questions: [],
         currentQ: 0,
-        winner: null,
+        winnerId: null,
+        winnerName: null,
         finalScores: []
     });
 
@@ -37,7 +38,7 @@ export default function BattlePage() {
 
     useEffect(() => {
         if (!user) {
-            navigate('/signin');
+            navigate('/');
             return;
         }
 
@@ -69,7 +70,8 @@ export default function BattlePage() {
                 players: data.players,
                 questions: data.questions,
                 currentQ: 0,
-                winner: null,
+                winnerId: null,
+                winnerName: null,
                 finalScores: []
             });
             setStatus('active');
@@ -88,7 +90,8 @@ export default function BattlePage() {
         socket.on('gameOver', (data) => {
             setGameState(prev => ({
                 ...prev,
-                winner: data.winner,
+                winnerId: data.winnerId,
+                winnerName: data.winnerName,
                 finalScores: data.finalScores
             }));
             setStatus('result');
@@ -307,8 +310,8 @@ export default function BattlePage() {
                 {/* Scoreboard */}
                 <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: '#1e293b', color: '#fff' }}>
                     {gameState.players.map((p, i) => (
-                        <div key={i} style={{ textAlign: i === 0 ? 'left' : 'right', borderBottom: p.name === user.name ? '3px solid var(--accent)' : 'none' }}>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name} {p.name === user.name && '(You)'}</div>
+                        <div key={p.id || i} style={{ textAlign: i === 0 ? 'left' : 'right', borderBottom: p.id === (user.id || user._id) ? '3px solid var(--accent)' : 'none' }}>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name} {p.id === (user.id || user._id) && '(You)'}</div>
                             <div style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>{p.score} pts</div>
                             <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Q {p.currentQ + 1} / {gameState.questions.length}</div>
                         </div>
@@ -354,10 +357,16 @@ export default function BattlePage() {
 
     const renderResult = () => (
         <div className="card" style={{ maxWidth: 500, margin: '2rem auto', textAlign: 'center', padding: '3rem 2rem' }}>
-            <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{gameState.winner === user.name ? '🎉 You Won!' : '😔 You Lost'}</h1>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
+                {gameState.winnerId === null
+                    ? '🤝 Draw'
+                    : gameState.winnerId === (user.id || user._id)
+                        ? '🎉 You Won!'
+                        : '😔 You Lost'}
+            </h1>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '2rem 0' }}>
-                {gameState.finalScores.sort((a,b)=>b.score-a.score).map((p, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-surface)', borderRadius: 8, border: p.name === user.name ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+                {[...gameState.finalScores].sort((a, b) => b.score - a.score).map((p, i) => (
+                    <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-surface)', borderRadius: 8, border: p.id === (user.id || user._id) ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
                         <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{i+1}. {p.name}</span>
                         <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem' }}>{p.score} pts</span>
                     </div>

@@ -83,7 +83,12 @@ export function setupSocketServer(server) {
 
         io.to(roomId).emit("gameStart", {
             roomId,
-            players: activeGames[roomId].players.map(p => ({ name: p.name, score: 0 })),
+            players: activeGames[roomId].players.map((p) => ({
+              id: p.id,
+              name: p.name,
+              score: 0,
+              currentQ: 0,
+            })),
             questions
         });
         broadcastStats();
@@ -105,14 +110,31 @@ export function setupSocketServer(server) {
 
             // Broadcast score update
             io.to(roomId).emit("scoreUpdate", {
-                players: game.players.map(p => ({ name: p.name, score: p.score, currentQ: p.currentQ }))
+                players: game.players.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    score: p.score,
+                    currentQ: p.currentQ,
+                }))
             });
 
             // Check if game over
             const allFinished = game.players.every(p => p.currentQ >= game.questions.length - 1);
             if (allFinished) {
-                const winner = game.players.reduce((a, b) => a.score > b.score ? a : b);
-                io.to(roomId).emit("gameOver", { winner: winner.name, finalScores: game.players.map(p => ({ name: p.name, score: p.score })) });
+                const [firstPlayer, secondPlayer] = game.players;
+                const winner =
+                    firstPlayer.score === secondPlayer.score
+                        ? null
+                        : game.players.reduce((a, b) => a.score > b.score ? a : b);
+                io.to(roomId).emit("gameOver", {
+                    winnerId: winner?.id || null,
+                    winnerName: winner?.name || null,
+                    finalScores: game.players.map((p) => ({
+                        id: p.id,
+                        name: p.name,
+                        score: p.score,
+                    })),
+                });
                 delete activeGames[roomId];
                 broadcastStats();
             }
