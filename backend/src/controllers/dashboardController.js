@@ -1,4 +1,4 @@
-import { Attempt } from "../models/index.js";
+import { Attempt, Users } from "../models/index.js";
 
 export async function getAttempts(req, res) {
   const attempts = await Attempt.find({ userId: req.userId })
@@ -11,6 +11,7 @@ export async function getAttempts(req, res) {
 export async function getDashboardStats(req, res) {
   try {
     const attempts = await Attempt.find({ userId: req.userId });
+    const user = await Users.findById(req.userId);
 
     const totalQuizzes = attempts.length;
     const totalScore = attempts.reduce((acc, a) => acc + a.score, 0);
@@ -30,6 +31,12 @@ export async function getDashboardStats(req, res) {
       averageScore,
       totalQuestionsAttempted,
       accuracyPercent,
+      gamification: {
+        xp: user?.xp || 0,
+        level: user?.level || 1,
+        streak: user?.streak || 0,
+        badges: user?.badges || [],
+      }
     });
   } catch {
     res.status(500).json({ message: "Error generating dashboard stats" });

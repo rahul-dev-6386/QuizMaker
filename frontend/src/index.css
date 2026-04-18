@@ -57,7 +57,7 @@
 
   /* Typography */
   --font-base: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
   --gradient-primary: linear-gradient(135deg, #155EEF 0%, #0F9FA8 100%);
   --gradient-soft: linear-gradient(135deg, rgba(21, 94, 239, 0.12), rgba(15, 159, 168, 0.14));
   --gradient-mesh: radial-gradient(circle at top left, rgba(21, 94, 239, 0.18), transparent 34%), radial-gradient(circle at top right, rgba(15, 159, 168, 0.18), transparent 28%), linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
@@ -143,7 +143,7 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 17.5px;
   scroll-behavior: smooth;
 }
 
@@ -151,7 +151,8 @@ body {
   font-family: var(--font-base);
   background: var(--bg-hero);
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: 0.015em;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -189,9 +190,9 @@ a:hover {
 
 /* ——— Layout Utilities ——— */
 .container {
-  max-width: 1200px;
+  max-width: none;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 3vw;
   width: 100%;
 }
 
@@ -466,7 +467,8 @@ a:hover {
 }
 
 .navbar-inner {
-  max-width: 1200px;
+  max-width: none;
+  padding: 0 1.5vw;
   margin: 0 auto;
   width: 100%;
   display: flex;
@@ -1430,7 +1432,8 @@ tbody tr:hover {
   display: flex;
   gap: 0.55rem;
   flex-wrap: wrap;
-  margin-bottom: 0.7rem;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.2rem;
 }
 
 .assistant-quick-action {
@@ -1463,9 +1466,15 @@ tbody tr:hover {
   flex: 1;
 }
 
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(21, 94, 239, 0.5); }
+  70% { box-shadow: 0 0 0 20px rgba(21, 94, 239, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(21, 94, 239, 0); }
+}
+
 .assistant-widget-trigger {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border: none;
   border-radius: 999px;
   display: inline-flex;
@@ -1476,6 +1485,7 @@ tbody tr:hover {
   background: linear-gradient(135deg, var(--primary), #2d8eff);
   box-shadow: 0 18px 34px rgba(21, 94, 239, 0.28);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  animation: pulseGlow 2.5s infinite;
 }
 
 .assistant-widget-trigger:hover {
@@ -1624,6 +1634,28 @@ tbody tr:hover {
   to {
     transform: rotate(360deg);
   }
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 5px;
+  padding: 5px 8px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 /* ——— Utility ——— */

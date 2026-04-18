@@ -66,7 +66,9 @@ export default function QuizPage() {
                     setQuizMeta({ quizId: qs[0].quizId });
                     setVisited({ [qs[0].questionId]: true });
                 }
-                setTimeLeft(parseInt(count, 10) * 60);
+                // Assign 60 seconds (1 minute) per question instead of the harsh 15-second default
+                const totalTime = qs.reduce((sum, q) => sum + (q.timeLimit || 60), 0);
+                setTimeLeft(totalTime);
             } catch (err) {
                 const code = err.response?.data?.code;
                 if (code === 'INSUFFICIENT_QUESTIONS') {

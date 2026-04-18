@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { DashboardIcon, LogoIcon, QuizIcon } from './Icons';
+import { DashboardIcon, LogoIcon, QuizIcon, TrophyIcon } from './Icons';
 
 const NAV_ITEMS = [
     { path: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
     { path: '/quizzes', label: 'Quizzes', icon: QuizIcon },
+    { path: '/battle', label: 'Battle', icon: TrophyIcon },
 ];
 
 export default function Navbar() {
@@ -102,6 +103,12 @@ export default function Navbar() {
                                     onClick={() => { navigate('/quizzes'); setDropdownOpen(false); }}
                                 >
                                     Quizzes
+                                </div>
+                                <div
+                                    className="user-dropdown-item"
+                                    onClick={() => { navigate('/battle'); setDropdownOpen(false); }}
+                                >
+                                    Battle
                                 </div>
                                 {isAdmin ? (
                                     <div

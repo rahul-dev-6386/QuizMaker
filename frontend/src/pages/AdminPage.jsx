@@ -5,7 +5,10 @@ import {
     getAdminQuizzes,
     getAdminUsers,
     mergeAdminQuizzes,
+    generateQuizWithAI,
+    getAdminAnalytics,
 } from '../api';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ChartIcon, DashboardIcon, QuizIcon, TrophyIcon } from '../components/Icons';
 import MathText from '../components/MathText';
 
@@ -32,6 +35,10 @@ export default function AdminPage() {
     const [selectedForMerge, setSelectedForMerge] = useState([]);
     const [mergeMeta, setMergeMeta] = useState({ title: '', category: '' });
 
+    const [analytics, setAnalytics] = useState(null);
+    const [aiForm, setAiForm] = useState({ topic: '', difficulty: 'medium', questionCount: 5 });
+    const [generatingAI, setGeneratingAI] = useState(false);
+
     const totalQuestions = questions.length;
 
     const userStats = useMemo(() => {
@@ -44,9 +51,10 @@ export default function AdminPage() {
     const loadAdminData = async () => {
         setManagementLoading(true);
         try {
-            const [quizRes, userRes] = await Promise.all([getAdminQuizzes(), getAdminUsers()]);
+            const [quizRes, userRes, analyticsRes] = await Promise.all([getAdminQuizzes(), getAdminUsers(), getAdminAnalytics()]);
             setAdminQuizzes(quizRes.data.quizzes || []);
             setAdminUsers(userRes.data.users || []);
+            setAnalytics(analyticsRes.data || null);
         } catch (e) {
             setError(e.response?.data?.message || 'Failed to load admin data.');
         } finally {
@@ -254,6 +262,22 @@ export default function AdminPage() {
         }
     };
 
+    const handleAIGeneration = async () => {
+        resetMessages();
+        if (!aiForm.topic.trim()) return setError('Topic is required for AI generation.');
+        setGeneratingAI(true);
+        try {
+            const res = await generateQuizWithAI(aiForm);
+            setSuccess(res.data.message);
+            await loadAdminData();
+            setActiveTab('manage');
+        } catch (e) {
+            setError(e.response?.data?.message || 'Failed to generate AI quiz.');
+        } finally {
+            setGeneratingAI(false);
+        }
+    };
+
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem', maxWidth: '1360px' }}>
             <div style={{ marginBottom: '1.5rem' }}>
@@ -274,6 +298,9 @@ export default function AdminPage() {
                 <button className={`btn ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('users')}>
                     <ChartIcon size={16} /> Users
                 </button>
+                <button className={`btn ${activeTab === 'analytics' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('analytics')}>
+                    <DashboardIcon size={16} /> Analytics
+                </button>
             </div>
 
             {activeTab === 'create' && (
@@ -290,6 +317,34 @@ export default function AdminPage() {
                                 <input className="form-input" name="category" value={form.category} onChange={handleFormChange} placeholder="OS" />
                             </div>
                         </div>
+                    </div>
+
+                    <div className="card" style={{ marginBottom: '1rem', borderTop: '3px solid var(--accent)' }}>
+                        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.75rem' }}>✨ Generate with AI</h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                            Automatically generates strictly unique questions. AI compares historical database queries to prevent duplicate questions.
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">Topic / Prompt</label>
+                                <input className="form-input" value={aiForm.topic} onChange={(e) => setAiForm({ ...aiForm, topic: e.target.value })} placeholder="e.g. JavaScript Promises" />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Difficulty</label>
+                                <select className="form-input" value={aiForm.difficulty} onChange={(e) => setAiForm({ ...aiForm, difficulty: e.target.value })}>
+                                    <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Questions Length</label>
+                                <select className="form-input" value={aiForm.questionCount} onChange={(e) => setAiForm({ ...aiForm, questionCount: Number(e.target.value) })}>
+                                    <option value={5}>5 Questions</option><option value={10}>10 Questions</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="button" className="btn btn-primary" onClick={handleAIGeneration} disabled={generatingAI}>
+                            {generatingAI ? 'Generating...' : 'Generate Quiz Magic'}
+                        </button>
                     </div>
 
                     <div className="card" style={{ marginBottom: '1rem' }}>
@@ -478,6 +533,42 @@ export default function AdminPage() {
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'analytics' && analytics && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '1rem' }}>
+                        <div className="stat-card">
+                            <div className="stat-icon" style={{ background: 'var(--primary-light)' }}><ChartIcon size={18} /></div>
+                            <div className="stat-value">{analytics.totalUsers}</div>
+                            <div className="stat-label">Total Users</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon" style={{ background: 'var(--warning-bg)' }}><QuizIcon size={18} /></div>
+                            <div className="stat-value">{analytics.totalQuizzes}</div>
+                            <div className="stat-label">Total Quizzes</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-icon" style={{ background: 'var(--success-bg)' }}><DashboardIcon size={18} /></div>
+                            <div className="stat-value">{analytics.totalAttempts}</div>
+                            <div className="stat-label">Total Attempts</div>
+                        </div>
+                    </div>
+                    <div className="card">
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '1.5rem' }}>Attempts over the last 7 days</h2>
+                        <div style={{ height: 350 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={analytics.attemptsByDay || []}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                                    <XAxis dataKey="_id" stroke="var(--text-secondary)" />
+                                    <YAxis stroke="var(--text-secondary)" />
+                                    <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', borderRadius: '8px' }} />
+                                    <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
                     </div>
                 </div>

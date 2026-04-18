@@ -11,6 +11,7 @@ const QuizSchema = new mongoose.Schema({
       correctAnswer: String,
     },
   ],
+  timeLimit: { type: Number, default: 15 },
 });
 
 export const Quiz = mongoose.model("Quiz", QuizSchema);

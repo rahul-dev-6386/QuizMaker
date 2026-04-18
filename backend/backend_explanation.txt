@@ -1,0 +1,201 @@
+Backend Project Explanation
+
+1. Backend Overview
+
+The backend is built with Node.js, Express, and MongoDB using Mongoose. It is a modular REST API responsible for authentication, quiz management, quiz attempts, analytics, admin operations, and an assistant feature.
+
+The architecture follows a layered design:
+- Routes define API endpoints
+- Middleware handles authentication and authorization
+- Controllers contain business logic
+- Models define MongoDB schemas
+- Services handle external integrations
+
+Simple interview line:
+"My backend is a modular REST API built with Express and MongoDB. I separated routes, controllers, middleware, and models so the code stays maintainable and each layer has a clear responsibility."
+
+2. Application Startup Flow
+
+The startup begins in src/server.js. The server first loads environment variables, connects to MongoDB, and then starts listening on the configured port. This ensures the application does not start serving requests before the database is ready.
+
+In src/app.js, the Express app is created and middleware such as cors() and express.json() is enabled. Then all route modules are mounted. A /health endpoint is also provided to confirm that the server is running correctly.
+
+3. Configuration and Environment Management
+
+Configuration is centralized in src/config/env.js. This file loads environment variables from .env and exposes them through an env object.
+
+The important values are:
+- PORT
+- MONGO_URL
+- JWT_SECRET
+- ADMIN_SECRET
+- ADMIN_AUTH_KEY
+- GEMINI_API_KEY
+
+Keeping configuration separate from source code avoids hardcoding secrets and makes deployment easier.
+
+4. Database Layer
+
+The backend uses MongoDB as the database and Mongoose as the ODM. The connection logic is in src/config/database.js and uses mongoose.connect() with the database URL from the environment configuration.
+
+Mongoose helps define schemas clearly and makes it easier to work with MongoDB documents in a structured way.
+
+5. Data Models
+
+User Model:
+The User model stores email, hashed password, name, authentication provider, verification-related fields, and role. The role can be either user or admin. The schema also includes fields for future-ready features such as OAuth and OTP support.
+
+Quiz Model:
+The Quiz model stores title, category, and an embedded array of questions. Each question contains question text, an optional image, four answer options, and the correct answer index.
+
+Attempt Model:
+The Attempt model stores userId, quizId, attemptMode, displayTitle, topicLabel, submitted answers, score, and submittedAt. This collection powers reports, dashboard statistics, leaderboard logic, and AI-based analysis.
+
+6. Route Structure
+
+The backend is divided into route modules:
+- authRoutes.js for signup, signin, and admin authentication
+- quizRoutes.js for quiz listing, random question generation, submission, reports, and leaderboards
+- dashboardRoutes.js for attempts and dashboard statistics
+- adminRoutes.js for admin-only quiz and user management
+- assistantRoutes.js for chatbot requests
+
+This separation keeps the API organized and easier to scale.
+
+7. Authentication System
+
+Signup Flow:
+The signup handler validates request input using Zod. It checks email format, minimum name length, and password complexity. If validation passes, the backend checks whether the email already exists. Then it hashes the password using bcrypt before saving the user.
+
+The signup flow also supports admin creation. If a valid admin secret is provided, the new user is assigned the admin role; otherwise the role stays as user.
+
+Signin Flow:
+The signin handler finds the user by email and compares the submitted password with the stored hash using bcrypt.compare(). If the credentials are correct, the backend creates a JWT token containing the user id and role.
+
+Auth Middleware:
+Protected routes use auth middleware. It reads the Authorization header, checks the Bearer token format, verifies the token using JWT_SECRET, and attaches req.userId and req.role to the request object.
+
+Admin Authorization:
+The adminOnly middleware checks whether the authenticated user has role equal to admin. If not, the request is rejected. This implements role-based access control.
+
+8. Quiz Module
+
+Fetching All Quizzes:
+There is an endpoint that returns all quizzes in a lightweight format with only id, title, and category. This avoids sending full question payloads when only summary data is required.
+
+Random Quiz Generation:
+The random quiz endpoint accepts a question count and optional filters like category or quizId. It uses MongoDB aggregation to:
+- filter quizzes
+- unwind the embedded questions array
+- count available questions
+- randomly sample questions using $sample
+
+After fetching the questions, the backend formats them for the frontend and shuffles the options. The correct answer is not exposed in the response.
+
+Quiz Submission:
+When the user submits answers, the backend validates the payload, loads the original questions from MongoDB, compares submitted answers with correct answers, calculates the score on the server, and stores the attempt in the database.
+
+This is a very important backend decision because score calculation should not happen on the frontend. If it happened on the client side, users could manipulate the result.
+
+Attempt Report:
+The attempt report endpoint reconstructs question details for a completed attempt and returns:
+- the question
+- all options
+- selected option
+- correct option
+- whether the answer was correct
+
+This supports the review page after quiz submission.
+
+Leaderboard:
+The leaderboard endpoint fetches top attempts for a quiz, sorts them by highest score, limits the result, and populates the user name.
+
+9. Dashboard Module
+
+The dashboard module calculates performance metrics for the logged-in user by reading attempt history. It computes:
+- total quizzes attempted
+- best score
+- average score
+- total questions attempted
+- accuracy percentage
+
+These values are derived from existing attempt data instead of being stored separately, which keeps the system simpler and avoids duplicated state.
+
+10. Admin Module
+
+Create Quiz:
+Admins can create quizzes by sending title, category, and questions. The backend validates that each question is properly formed, contains exactly four options, and has a valid correct answer index.
+
+List and Delete Quizzes:
+Admins can list quiz summaries and delete quizzes. When a quiz is deleted, related attempts are also deleted to prevent orphaned records.
+
+Merge Quizzes:
+The merge feature combines multiple quizzes into a new one. It removes duplicates by creating a fingerprint from question text, options, correct answer, and image. This is more advanced than basic CRUD and is a strong point to mention in an interview.
+
+User Reporting:
+Admins can list users with derived statistics such as attempt count and best score. This is implemented using MongoDB aggregation with lookup logic.
+
+11. Assistant and AI Analysis
+
+Chat Assistant:
+The assistant endpoint answers platform-related user questions such as:
+- how many quizzes are available
+- the user last scorecard
+- total attempts
+- total attempted questions
+- accuracy
+- best score
+
+It uses simple intent matching instead of calling a large language model for every query.
+
+Quiz Analysis with Gemini:
+The backend also includes an AI-based quiz analysis endpoint. It identifies wrong answers from an attempt, reconstructs question data, builds a prompt, and sends it to Gemini through a service layer. Gemini returns concise learning feedback.
+
+Separating this logic into a service keeps the controller cleaner and makes third-party API integration reusable.
+
+12. Security and Validation
+
+The backend includes several important security decisions:
+- passwords are hashed with bcrypt
+- JWT is used for stateless authentication
+- protected routes require bearer token verification
+- admin routes require both authentication and admin role
+- signup and signin use schema validation with Zod
+- score calculation happens on the server side
+
+These choices make the backend more secure and align with backend best practices.
+
+13. End-to-End Request Flow Example
+
+Signin and Protected Access:
+A user sends email and password to the signin endpoint. The backend validates the input, finds the user, compares the password hash, and returns a JWT token. For future requests, the client sends this token in the Authorization header. The auth middleware verifies it and attaches user information to the request before business logic runs.
+
+Quiz Submission:
+A user submits quiz answers. The backend validates the payload, fetches the original questions from MongoDB, calculates the score, stores the attempt, and returns the result. That stored attempt is then reused for reports, dashboard analytics, leaderboards, and AI explanations.
+
+14. Key Technical Strengths
+
+- modular Express architecture
+- JWT authentication and role-based authorization
+- secure password hashing with bcrypt
+- clear Mongoose schema design
+- MongoDB aggregation for question sampling and reporting
+- server-side score calculation
+- dashboard analytics derived from attempt history
+- admin-only quiz lifecycle management
+- AI-based quiz analysis integration
+
+15. Improvements for Production
+
+If asked what could be improved, these are good points to mention:
+- add centralized error-handling middleware
+- apply schema validation consistently to all endpoints
+- add refresh tokens
+- add pagination for admin and reporting endpoints
+- add rate limiting and security middleware like Helmet
+- add unit and integration tests
+- optimize indexing for larger datasets
+
+16. Interview-Ready Conclusion
+
+"Overall, the backend is designed to be modular, secure, and feature-focused. It handles authentication, quiz management, answer evaluation, reporting, analytics, admin operations, and AI-based learning support. I designed it so the backend remains responsible for security-sensitive logic like authentication and score calculation, while the frontend mainly handles presentation."

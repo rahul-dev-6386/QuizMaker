@@ -93,7 +93,7 @@ async function attachSessionCookies(req, res, user) {
   }
 
   res.cookie("accessToken", accessToken, cookieOptions);
-  res.cookie("refreshToken", refreshToken, cookieOptions);
+  res.cookie("refreshToken", refreshToken, { ...cookieOptions, path: "/auth" });
 }
 
 export async function signupHandler(req, res) {
@@ -153,7 +153,10 @@ export async function signupHandler(req, res) {
     } catch (err) {
       console.error("Signup OTP email send failed:", err);
       await Otp.deleteMany({ email, purpose: "signup" });
-      return res.status(500).json({ message: "Failed to send OTP" });
+      return res.status(500).json({
+        message: "Failed to send OTP",
+        debug: err?.message || "Unknown mail error",
+      });
     }
 
     return res.json({
@@ -331,7 +334,7 @@ export async function logoutHandler(req, res) {
     }
 
     res.clearCookie("accessToken", cookieOptions);
-    res.clearCookie("refreshToken", cookieOptions);
+    res.clearCookie("refreshToken", { ...cookieOptions, path: "/auth" });
     return res.json({ message: "You are Logged Out" });
   } catch {
     return res.status(500).json({ message: "Logout Failed" });
@@ -347,7 +350,7 @@ export async function allLogoutHandler(req, res) {
     });
 
     res.clearCookie("accessToken", cookieOptions);
-    res.clearCookie("refreshToken", cookieOptions);
+    res.clearCookie("refreshToken", { ...cookieOptions, path: "/auth" });
     return res.json({ message: "Logged Out from all Devices" });
   } catch {
     return res.status(500).json({ message: "Failed to Log out" });
@@ -415,7 +418,10 @@ export async function forgotPasswordHandler(req, res) {
     } catch (err) {
       console.error("Forgot-password OTP email send failed:", err);
       await Otp.deleteMany({ email: parsed.data.email, purpose: "password-reset" });
-      return res.status(500).json({ message: "Error sending OTP" });
+      return res.status(500).json({
+        message: "Error sending OTP",
+        debug: err?.message || "Unknown mail error",
+      });
     }
 
     return res.json({

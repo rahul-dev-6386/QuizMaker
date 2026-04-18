@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Attempt, Quiz, Users } from "../models/index.js";
+import { generateGeminiText } from "../services/geminiService.js";
 
 export async function createQuiz(req, res) {
   const { title, category, questions } = req.body;
@@ -200,5 +201,78 @@ export async function adminListUsers(req, res) {
     return res.json({ users });
   } catch {
     return res.status(500).json({ message: "Error fetching users" });
+  }
+}
+
+export async function generateQuizWithAI(req, res) {
+  const { topic, difficulty, questionCount = 10 } = req.body;
+  if (!topic) return res.status(400).json({ message: "Topic is required" });
+
+  try {
+    const existingQuizzes = await Quiz.find({ category: { $regex: new RegExp(`^${topic}$`, "i") } });
+    const existingQuestions = [];
+    existingQuizzes.forEach(quiz => {
+        if (quiz.questions && Array.isArray(quiz.questions)) {
+            quiz.questions.forEach(q => {
+                if (q.question) existingQuestions.push(String(q.question).replace(/"/g, "'"));
+            });
+        }
+    });
+
+    let extraInstruction = "";
+    if (existingQuestions.length > 0) {
+        extraInstruction = `\nCRITICAL: You must generate completely unique questions. Do NOT generate any questions that duplicate or are highly similar to the following previously generated questions:\n${existingQuestions.map(q => "- " + q).join('\n')}\n`;
+    }
+
+    const prompt = `
+Generate a ${difficulty || 'medium'} difficulty multiple-choice quiz about "${topic}" with ${questionCount} questions.
+${extraInstruction}
+You must return only a valid JSON array of objects, with no markdown formatting and no extra text.
+Each object must have:
+- "question": string
+- "options": array of exactly 4 strings
+- "correctAnswer": string (must be "0", "1", "2", or "3" representing the correct option index)
+`;
+    const aiResponse = await generateGeminiText([{ role: "user", parts: [{ text: prompt }] }]);
+    const jsonStr = aiResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const questions = JSON.parse(jsonStr);
+
+    const quiz = await Quiz.create({
+      title: `${topic} Quiz (AI Generated)`,
+      category: topic,
+      questions,
+      timeLimit: 15,
+    });
+
+    return res.json({ message: "AI Quiz generated successfully", quiz });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to generate AI quiz", error: err.message });
+  }
+}
+
+export async function getAnalytics(req, res) {
+  try {
+    const totalUsers = await Users.countDocuments();
+    const totalQuizzes = await Quiz.countDocuments();
+    const totalAttempts = await Attempt.countDocuments();
+    
+    // Aggregate attempts by day for the last 7 days chart
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const attemptsByDay = await Attempt.aggregate([
+      { $match: { submittedAt: { $gte: sevenDaysAgo } } },
+      { $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$submittedAt" } },
+          count: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
+
+    return res.json({
+      totalUsers, totalQuizzes, totalAttempts, attemptsByDay
+    });
+  } catch {
+    return res.status(500).json({ message: "Error fetching analytics" });
   }
 }

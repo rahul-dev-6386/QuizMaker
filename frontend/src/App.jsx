@@ -15,6 +15,7 @@ import ResultsPage from './pages/ResultsPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AdminPage from './pages/AdminPage';
 import AdminAuth from './pages/AdminAuth';
+import BattlePage from './pages/BattlePage';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/leaderboard/:quizId" element={<ProtectedRoute><LeaderboardPage /></ProtectedRoute>} />
         <Route path="/admin-auth" element={<ProtectedRoute><AdminAuth /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPage /></ProtectedRoute>} />
+        <Route path="/battle" element={<ProtectedRoute><BattlePage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={user ? '/dashboard' : '/'} replace />} />
       </Routes>
     </>

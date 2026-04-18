@@ -97,11 +97,13 @@ export const getAttemptReport = (attemptId) => API.get(`/quiz/report/${attemptId
 
 /* ——— Admin ——— */
 export const createQuiz = (data) => API.post('/admin/quiz/create', data);
+export const generateQuizWithAI = (data) => API.post('/admin/quiz/generate', data);
 export const authenticateAdmin = (data) => API.post('/admin/authenticate', data);
 export const getAdminQuizzes = () => API.get('/admin/quizzes');
 export const deleteAdminQuiz = (quizId) => API.delete(`/admin/quiz/${quizId}`);
 export const mergeAdminQuizzes = (data) => API.post('/admin/quiz/merge', data);
 export const getAdminUsers = () => API.get('/admin/users');
+export const getAdminAnalytics = () => API.get('/admin/analytics');
 
 /* ——— Chatbot ——— */
 export const chatWithAI = (data) => API.post('/chatbot/chat', data);

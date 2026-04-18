@@ -58,6 +58,7 @@ export default function Dashboard() {
     const [showStartModal, setShowStartModal] = useState(false);
     const [selectedTopic, setSelectedTopic] = useState('All');
     const [selectedCount, setSelectedCount] = useState(5);
+    const [showAllAttempts, setShowAllAttempts] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -108,8 +109,10 @@ export default function Dashboard() {
         );
     }
 
+    const visibleAttempts = showAllAttempts ? attempts : attempts.slice(0, 5);
+
     return (
-        <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem', maxWidth: '1360px' }}>
+        <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem' }}>
             {/* Page Header */}
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -126,6 +129,40 @@ export default function Dashboard() {
                     </button>
                 </div>
             </div>
+
+            {/* Gamification Banner */}
+            {stats && stats.gamification && (
+                <div className="card" style={{
+                    marginBottom: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))',
+                    borderColor: 'rgba(16,185,129,0.2)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)' }}>Lvl {stats.gamification.level}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Current Level</div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: 'var(--border)' }}></div>
+                            <div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats.gamification.xp} XP</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Earn more by taking quizzes</div>
+                            </div>
+                            <div style={{ width: '1px', height: '40px', background: 'var(--border)' }}></div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.5rem' }}>🔥 {stats.gamification.streak}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Day Streak</div>
+                            </div>
+                        </div>
+                        {stats.gamification.badges.length > 0 && (
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {stats.gamification.badges.map((badge) => (
+                                    <span key={badge} className="badge" style={{ background: '#fbbf24', color: '#fff', border: 'none' }}>🏆 {badge}</span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {error && <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>✕ {error}</div>}
 
@@ -190,7 +227,7 @@ export default function Dashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {attempts.map((a) => (
+                                {visibleAttempts.map((a) => (
                                     <tr key={a._id}>
                                         <td style={{ fontWeight: 600 }}>
                                             {getAttemptTitle(a)}
@@ -239,6 +276,13 @@ export default function Dashboard() {
                                 ))}
                             </tbody>
                         </table>
+                        {attempts.length > 5 && (
+                            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                                <button className="btn btn-secondary" onClick={() => setShowAllAttempts(!showAllAttempts)}>
+                                    {showAllAttempts ? 'Show Less' : 'Show All Attempts'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -277,6 +321,22 @@ export default function Dashboard() {
                     </p>
                     <button className="btn btn-accent btn-sm" onClick={() => navigate('/quiz/10')}>
                         Challenge
+                    </button>
+                </div>
+
+                <div className="card" style={{
+                    background: 'linear-gradient(135deg, rgba(239,68,68,0.1), rgba(248,113,113,0.06))',
+                    borderColor: 'rgba(239,68,68,0.2)',
+                }}>
+                    <div style={{ color: '#ef4444', marginBottom: '0.75rem' }}>⚔️</div>
+                    <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                        Live Multiplayer Battle
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '1rem', lineHeight: 1.5 }}>
+                        Queue up and challenge another learner in a real-time showdown!
+                    </p>
+                    <button className="btn btn-danger btn-sm" onClick={() => navigate('/battle')}>
+                        Battle Now
                     </button>
                 </div>
             </div>

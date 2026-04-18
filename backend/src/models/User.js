@@ -20,6 +20,11 @@ const UserSchema = new mongoose.Schema({
     enum: ["user", "admin"],
     default: "user",
   },
+  xp: { type: Number, default: 0 },
+  level: { type: Number, default: 1 },
+  streak: { type: Number, default: 0 },
+  lastActiveDate: { type: Date, default: null },
+  badges: { type: [String], default: [] },
 });
 
 export const Users = mongoose.model("User", UserSchema);

@@ -10,18 +10,16 @@ export default function PlatformAssistantWidget() {
         {
             role: 'bot',
             text:
-                'I can help with platform tasks.\nTry: how many quizzes are there, my last scorecard, total attempted questions, my accuracy, my best score, total attempts.',
+                'I am Sharthi, your personal platform assistant. Try asking me: how many quizzes are available, what is my best score, or show me my accuracy stats!',
         },
     ]);
 
     const quickActions = useMemo(
         () => [
-            'how many quizzes are there',
-            'my last scorecard',
-            'total attempted questions',
-            'my accuracy',
-            'my best score',
-            'total attempts',
+            'Available Quizzes?',
+            'Latest Scorecard',
+            'Overall Accuracy',
+            'My Best Score',
         ],
         []
     );
@@ -56,25 +54,36 @@ export default function PlatformAssistantWidget() {
         <div className="assistant-widget-shell">
             {open && (
                 <div className="assistant-widget-panel">
-                    <div className="assistant-widget-header">
-                        <div className="assistant-widget-title">
-                            <BotIcon size={16} />
+                    <div className="assistant-widget-header" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)', color: '#fff', border: 'none' }}>
+                        <div className="assistant-widget-title" style={{ color: '#fff' }}>
+                            <BotIcon size={20} />
                             <div>
-                                <strong>Platform Assistant</strong>
-                                <div className="assistant-widget-subtitle">Quiz, reports, attempts, and score insights</div>
+                                <strong style={{ fontSize: '1rem' }}>Sharthi Assistant</strong>
+                                <div className="assistant-widget-subtitle" style={{ color: 'rgba(255,255,255,0.8)' }}>Your AI-powered quiz guide</div>
                             </div>
                         </div>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
-                            Close
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button className="btn btn-ghost btn-sm" style={{ color: '#fff', background: 'rgba(255,255,255,0.1)' }} onClick={() => setMessages([messages[0]])}>Clear</button>
+                            <button className="btn btn-ghost btn-sm" style={{ color: '#fff' }} onClick={() => setOpen(false)}>✕</button>
+                        </div>
                     </div>
 
                     <div className="assistant-widget-messages">
                         {messages.map((m, i) => (
                             <div key={i} className={`assistant-widget-bubble ${m.role === 'user' ? 'user' : 'bot'}`}>
+                                {m.role === 'bot' && <div style={{ marginBottom: '4px', opacity: 0.8 }}><BotIcon size={14} /></div>}
                                 {m.text}
                             </div>
                         ))}
+                        {loading && (
+                            <div className="assistant-widget-bubble bot">
+                                <div className="typing-indicator">
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="assistant-widget-footer">
@@ -96,10 +105,11 @@ export default function PlatformAssistantWidget() {
                                 className="form-input"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Ask about your quizzes, attempts, or reports"
+                                placeholder="Ask Sharthi about your stats..."
+                                disabled={loading}
                             />
-                            <button className="btn btn-primary btn-sm" type="submit" disabled={loading}>
-                                {loading ? '...' : 'Send'}
+                            <button className="btn btn-primary btn-sm" type="submit" disabled={loading || !input.trim()}>
+                                Send
                             </button>
                         </form>
                     </div>

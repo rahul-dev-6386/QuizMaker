@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Attempt, Quiz } from "../models/index.js";
+import { Attempt, Quiz, Users } from "../models/index.js";
 import { shuffleArray } from "../utils/shuffle.js";
 import { generateGeminiText } from "../services/geminiService.js";
 
@@ -54,6 +54,7 @@ export async function quizGenerator(req, res) {
           text,
         }))
       ),
+      timeLimit: q.timeLimit || 15,
     }));
 
     return res.json({ totalQuestions: formatted.length, questions: formatted });
@@ -123,6 +124,44 @@ export async function submitQuiz(req, res) {
       answers,
       score,
     });
+
+    const user = await Users.findById(req.userId);
+    if (user) {
+      const now = new Date();
+      if (user.lastActiveDate) {
+        const lastActive = new Date(user.lastActiveDate);
+        // Set to start of day for accurate streak comparison
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const lastDate = new Date(lastActive.getFullYear(), lastActive.getMonth(), lastActive.getDate());
+        const diffDays = Math.round((today - lastDate) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          user.streak += 1;
+        } else if (diffDays > 1) {
+          user.streak = 1;
+        }
+      } else {
+        user.streak = 1;
+      }
+      user.lastActiveDate = now;
+
+      const xpGained = score * 10;
+      user.xp += xpGained;
+      user.level = Math.floor(user.xp / 100) + 1;
+
+      if (score === answers.length && answers.length > 0) {
+        if (!user.badges.includes("Flawless")) {
+          user.badges.push("Flawless");
+        }
+      }
+      if (user.streak >= 3) {
+        if (!user.badges.includes("3-Day Streak")) {
+          user.badges.push("3-Day Streak");
+        }
+      }
+
+      await user.save();
+    }
 
     return res.json({
       score,
