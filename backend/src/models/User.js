@@ -25,6 +25,9 @@ const UserSchema = new mongoose.Schema({
   streak: { type: Number, default: 0 },
   lastActiveDate: { type: Date, default: null },
   badges: { type: [String], default: [] },
+  battleWins: { type: Number, default: 0 },
+  battleLosses: { type: Number, default: 0 },
+  battleDraws: { type: Number, default: 0 },
 });
 
 export const Users = mongoose.model("User", UserSchema);

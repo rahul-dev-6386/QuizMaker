@@ -24,6 +24,13 @@ export async function getDashboardStats(req, res) {
     const accuracyPercent = totalQuestionsAttempted
       ? (totalScore / totalQuestionsAttempted) * 100
       : 0;
+    const battleWins = user?.battleWins || 0;
+    const battleLosses = user?.battleLosses || 0;
+    const battleDraws = user?.battleDraws || 0;
+    const battleMatches = battleWins + battleLosses + battleDraws;
+    const battleWinRate = battleMatches
+      ? (battleWins / battleMatches) * 100
+      : 0;
 
     res.json({
       totalQuizzes,
@@ -31,6 +38,13 @@ export async function getDashboardStats(req, res) {
       averageScore,
       totalQuestionsAttempted,
       accuracyPercent,
+      battleStats: {
+        wins: battleWins,
+        losses: battleLosses,
+        draws: battleDraws,
+        matches: battleMatches,
+        winRate: battleWinRate,
+      },
       gamification: {
         xp: user?.xp || 0,
         level: user?.level || 1,

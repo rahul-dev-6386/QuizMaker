@@ -190,6 +190,53 @@ export default function Dashboard() {
                 />
             </div>
 
+            <div className="card" style={{
+                marginBottom: '2.25rem',
+                background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(15,159,168,0.08))',
+                borderColor: 'rgba(15,159,168,0.18)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                    <div>
+                        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                            Live Battle Analysis
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+                            Your real-time 1v1 record updates automatically after every completed battle.
+                        </p>
+                    </div>
+                    <span className="badge" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.22)' }}>
+                        ⚔️ Multiplayer Stats
+                    </span>
+                </div>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: '1rem',
+                }}>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Matches</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>{stats?.battleStats?.matches ?? 0}</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(15,159,110,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wins</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--success)', marginTop: '0.3rem' }}>{stats?.battleStats?.wins ?? 0}</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(209,67,67,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Losses</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--danger)', marginTop: '0.3rem' }}>{stats?.battleStats?.losses ?? 0}</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(200,129,26,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Draws</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--warning)', marginTop: '0.3rem' }}>{stats?.battleStats?.draws ?? 0}</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(21,94,239,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Win Rate</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.3rem' }}>{Math.round(stats?.battleStats?.winRate ?? 0)}%</div>
+                    </div>
+                </div>
+            </div>
+
             {/* Recent Attempts */}
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>

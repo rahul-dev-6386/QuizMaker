@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { Quiz } from "./models/index.js";
+import { Quiz, Users } from "./models/index.js";
 
 // Matchmaking queues per category
 // { "General": [userId, userId2], ... }
@@ -47,6 +47,42 @@ async function getBattleQuestions(category, count = 5) {
     quizId: String(question.quizId),
     questionId: String(question.questionId),
   }));
+}
+
+async function recordBattleOutcome(players) {
+  if (!Array.isArray(players) || players.length < 2) return;
+
+  const [firstPlayer, secondPlayer] = players;
+
+  if (firstPlayer.score === secondPlayer.score) {
+    await Users.updateMany(
+      { _id: { $in: [firstPlayer.id, secondPlayer.id] } },
+      { $inc: { battleDraws: 1 } }
+    );
+    return;
+  }
+
+  const winner = firstPlayer.score > secondPlayer.score ? firstPlayer : secondPlayer;
+  const loser = winner === firstPlayer ? secondPlayer : firstPlayer;
+
+  await Promise.all([
+    Users.findByIdAndUpdate(winner.id, { $inc: { battleWins: 1 } }),
+    Users.findByIdAndUpdate(loser.id, { $inc: { battleLosses: 1 } }),
+  ]);
+}
+
+async function recordDisconnectOutcome(players, disconnectedSocketId) {
+  if (!Array.isArray(players) || players.length < 2) return;
+
+  const loser = players.find((player) => player.socketId === disconnectedSocketId);
+  const winner = players.find((player) => player.socketId !== disconnectedSocketId);
+
+  if (!winner || !loser) return;
+
+  await Promise.all([
+    Users.findByIdAndUpdate(winner.id, { $inc: { battleWins: 1 } }),
+    Users.findByIdAndUpdate(loser.id, { $inc: { battleLosses: 1 } }),
+  ]);
 }
 
 export function setupSocketServer(server) {
@@ -104,21 +140,31 @@ export function setupSocketServer(server) {
         playerRoom[p1.socketId] = roomId;
         playerRoom[p2.socketId] = roomId;
 
-        io.to(roomId).emit("gameStart", {
+        const payloadPlayers = activeGames[roomId].players.map((p) => ({
+          id: String(p.id),
+          socketId: p.socketId,
+          name: p.name,
+          score: 0,
+          currentQ: 0,
+        }));
+
+        io.to(p1.socketId).emit("gameStart", {
             roomId,
-            players: activeGames[roomId].players.map((p) => ({
-              id: String(p.id),
-              name: p.name,
-              score: 0,
-              currentQ: 0,
-            })),
+            selfSocketId: p1.socketId,
+            players: payloadPlayers,
+            questions
+        });
+        io.to(p2.socketId).emit("gameStart", {
+            roomId,
+            selfSocketId: p2.socketId,
+            players: payloadPlayers,
             questions
         });
         broadcastStats();
       }
     });
 
-    socket.on("submitAnswer", ({ roomId, questionIndex, isCorrect, scoreTimeElapsed }) => {
+    socket.on("submitAnswer", async ({ roomId, questionIndex, isCorrect, scoreTimeElapsed }) => {
         const game = activeGames[roomId];
         if (!game) return;
 
@@ -135,6 +181,7 @@ export function setupSocketServer(server) {
             io.to(roomId).emit("scoreUpdate", {
                 players: game.players.map((p) => ({
                     id: String(p.id),
+                    socketId: p.socketId,
                     name: p.name,
                     score: p.score,
                     currentQ: p.currentQ,
@@ -149,11 +196,14 @@ export function setupSocketServer(server) {
                     firstPlayer.score === secondPlayer.score
                         ? null
                         : game.players.reduce((a, b) => a.score > b.score ? a : b);
+                await recordBattleOutcome(game.players);
                 io.to(roomId).emit("gameOver", {
                     winnerId: winner?.id || null,
+                    winnerSocketId: winner?.socketId || null,
                     winnerName: winner?.name || null,
                     finalScores: game.players.map((p) => ({
                         id: String(p.id),
+                        socketId: p.socketId,
                         name: p.name,
                         score: p.score,
                     })),
@@ -174,6 +224,7 @@ export function setupSocketServer(server) {
         // Handle disconnect in-game
         const roomId = playerRoom[socket.id];
         if (roomId && activeGames[roomId]) {
+            await recordDisconnectOutcome(activeGames[roomId].players, socket.id);
             io.to(roomId).emit("opponentDisconnected");
             delete activeGames[roomId];
         }

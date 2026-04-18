@@ -25,10 +25,12 @@ export default function BattlePage() {
     
     const [gameState, setGameState] = useState({
         roomId: null,
+        selfSocketId: null,
         players: [],
         questions: [],
         currentQ: 0,
         winnerId: null,
+        winnerSocketId: null,
         winnerName: null,
         finalScores: []
     });
@@ -68,10 +70,12 @@ export default function BattlePage() {
         socket.on('gameStart', (data) => {
             setGameState({
                 roomId: data.roomId,
+                selfSocketId: data.selfSocketId,
                 players: data.players,
                 questions: data.questions,
                 currentQ: 0,
                 winnerId: null,
+                winnerSocketId: null,
                 winnerName: null,
                 finalScores: []
             });
@@ -92,6 +96,7 @@ export default function BattlePage() {
             setGameState(prev => ({
                 ...prev,
                 winnerId: data.winnerId,
+                winnerSocketId: data.winnerSocketId,
                 winnerName: data.winnerName,
                 finalScores: data.finalScores
             }));
@@ -190,10 +195,10 @@ export default function BattlePage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 700 }}>
-                            Live Multiplayer Battle
+                            Live 1v1 Battle Arena
                         </h1>
                         <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem', fontSize: '0.95rem' }}>
-                            Queue up against other learners in real-time matchmaking.
+                            Match instantly, answer fast, and climb above your rival in a live five-question duel.
                         </p>
                     </div>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--success-bg)', color: 'var(--success)', padding: '0.4rem 0.8rem', borderRadius: 999, fontSize: '0.875rem', fontWeight: 600 }}>
@@ -213,23 +218,23 @@ export default function BattlePage() {
                             <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: '8px', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 'bold' }}>1</div>
                             <div>
                                 <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.95rem' }}>Pick a Category</strong>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>Choose a specific subject or select General to include questions from every topic.</span>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>Choose your topic and the match will draw a fresh shuffled set from available quizzes in that category.</span>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: '8px', background: 'var(--warning-bg)', color: 'var(--warning)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 'bold' }}>2</div>
                             <div>
-                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.95rem' }}>Answer Fast</strong>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>You lose 10 points for every second you wait. Lock in your answers instantly!</span>
+                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.95rem' }}>Beat The Clock</strong>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>Correct answers score higher when you answer earlier, so speed matters just as much as accuracy.</span>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <div style={{ width: 32, height: 32, flexShrink: 0, borderRadius: '8px', background: 'var(--danger-bg)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 'bold' }}>3</div>
                             <div>
-                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.95rem' }}>Dominate</strong>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>Outscore your opponent across all questions to claim victory.</span>
+                                <strong style={{ display: 'block', color: 'var(--text-primary)', fontSize: '0.95rem' }}>Claim The Win</strong>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4, display: 'block' }}>After five questions, the higher score wins. Tied scores finish as a draw.</span>
                             </div>
                         </div>
                     </div>
@@ -237,7 +242,10 @@ export default function BattlePage() {
 
                 {/* Right Card: Matchmaking Action */}
                 <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-primary)' }}>Find Opponent</h2>
+                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Start A Battle</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                        Queue for a live head-to-head match. We&apos;ll pair you with the next learner in the same topic.
+                    </p>
                     
                     <div className="form-group" style={{ marginBottom: '2rem' }}>
                         <label className="form-label">Category</label>
@@ -259,7 +267,7 @@ export default function BattlePage() {
     );
 
     const renderQueue = () => (
-        <div style={{ maxWidth: 600, margin: '4rem auto', textAlign: 'center' }}>
+        <div style={{ maxWidth: 700, margin: '4rem auto', textAlign: 'center' }}>
             <div style={{
                 position: 'relative',
                 width: 140, height: 140, margin: '0 auto 3rem auto',
@@ -277,11 +285,11 @@ export default function BattlePage() {
             </div>
 
             <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
-                Searching Data Feeds...
+                Matchmaking In Progress
             </h2>
             
             <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', marginBottom: '2.5rem' }}>
-                Scanning globally for a worthy opponent. Get ready to lock in your answers!
+                Looking for another player in <strong style={{ color: 'var(--primary)' }}>{selectedCategory}</strong>. Keep this tab open and get ready for a five-question sprint.
             </p>
             
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '3.5rem', flexWrap: 'wrap' }}>
@@ -305,29 +313,37 @@ export default function BattlePage() {
     const renderActiveData = () => {
         if (!gameState.questions.length) return null;
         const q = gameState.questions[gameState.currentQ];
-        const isCurrentUser = (playerId) => String(playerId || '') === currentUserId;
+        const isCurrentUser = (player) =>
+            String(player?.socketId || '') === String(gameState.selfSocketId || '') ||
+            String(player?.id || '') === currentUserId;
         
         return (
-            <div style={{ maxWidth: 900, margin: '2rem auto' }}>
+            <div style={{ maxWidth: 980, margin: '2rem auto' }}>
                 {/* Scoreboard */}
-                <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: '#1e293b', color: '#fff' }}>
+                <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', alignItems: 'stretch', marginBottom: '1.5rem', background: 'linear-gradient(135deg, rgba(16,35,63,0.98), rgba(15,31,55,0.92))', color: '#fff', borderColor: 'rgba(255,255,255,0.08)' }}>
                     {gameState.players.map((p, i) => (
-                        <div key={p.id || i} style={{ textAlign: i === 0 ? 'left' : 'right', borderBottom: isCurrentUser(p.id) ? '3px solid var(--accent)' : 'none' }}>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name} {isCurrentUser(p.id) && '(You)'}</div>
-                            <div style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>{p.score} pts</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Q {p.currentQ + 1} / {gameState.questions.length}</div>
+                        <div key={p.socketId || p.id || i} style={{ padding: '1rem 1.1rem', borderRadius: 16, border: isCurrentUser(p) ? '1px solid rgba(15,159,168,0.45)' : '1px solid rgba(255,255,255,0.08)', background: isCurrentUser(p) ? 'rgba(15,159,168,0.12)' : 'rgba(255,255,255,0.03)' }}>
+                            <div style={{ fontSize: '0.8rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: isCurrentUser(p) ? '#7ee7e3' : 'rgba(255,255,255,0.65)', marginBottom: '0.4rem' }}>
+                                {isCurrentUser(p) ? 'You' : 'Opponent'}
+                            </div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name}{isCurrentUser(p) ? ' (You)' : ''}</div>
+                            <div style={{ fontSize: '1.65rem', color: '#3dd9d1', marginTop: '0.35rem' }}>{p.score} pts</div>
+                            <div style={{ fontSize: '0.82rem', opacity: 0.82, marginTop: '0.35rem' }}>Answered {Math.min((p.currentQ || 0) + 1, gameState.questions.length)} / {gameState.questions.length}</div>
                         </div>
                     ))}
                 </div>
 
                 {/* Question Area */}
-                <div className="card" style={{ padding: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                        <span style={{ fontWeight: 'bold', color: 'var(--primary)' }}>Question {gameState.currentQ + 1} of {gameState.questions.length}</span>
-                        <span style={{ color: timeElapsed > 10 ? 'var(--danger)' : 'var(--text-secondary)' }}>⏱️ {timeElapsed}s</span>
+                <div className="card" style={{ padding: '2rem', boxShadow: 'var(--shadow-lg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                        <span style={{ fontWeight: 'bold', color: 'var(--primary)', fontSize: '0.95rem' }}>Question {gameState.currentQ + 1} of {gameState.questions.length}</span>
+                        <span className="badge" style={{ background: timeElapsed > 10 ? 'var(--danger-bg)' : 'var(--bg-subtle)', color: timeElapsed > 10 ? 'var(--danger)' : 'var(--text-secondary)', border: '1px solid var(--border)' }}>⏱ {timeElapsed}s elapsed</span>
                     </div>
 
-                    <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem' }}><MathText text={q.question} /></h2>
+                    <h2 style={{ fontSize: '1.7rem', marginBottom: '0.8rem', lineHeight: 1.35 }}><MathText text={q.question} /></h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.75rem', fontSize: '0.95rem' }}>
+                        Select one answer. Faster correct answers earn more points.
+                    </p>
                     
                     {q.questionImage && <img src={q.questionImage} alt="Question" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: '2rem' }} />}
 
@@ -359,27 +375,37 @@ export default function BattlePage() {
 
     const renderResult = () => (
         (() => {
-            const isCurrentUser = (playerId) => String(playerId || '') === currentUserId;
+            const isCurrentUser = (player) =>
+                String(player?.socketId || '') === String(gameState.selfSocketId || '') ||
+                String(player?.id || '') === currentUserId;
             const sortedScores = [...gameState.finalScores].sort((a, b) => b.score - a.score);
             const topScore = sortedScores[0]?.score;
             const leaders = sortedScores.filter((p) => p.score === topScore);
-            const currentPlayer = sortedScores.find((p) => isCurrentUser(p.id));
+            const currentPlayer = sortedScores.find((p) => isCurrentUser(p));
             const resultTitle = !currentPlayer || topScore === undefined
                 ? 'Battle Complete'
                 : leaders.length > 1
                     ? '🤝 Draw'
-                    : isCurrentUser(sortedScores[0]?.id)
+                    : isCurrentUser(sortedScores[0])
                         ? '🎉 You Won!'
                         : '😔 You Lost';
+            const resultSummary = !currentPlayer || topScore === undefined
+                ? 'The battle has ended.'
+                : leaders.length > 1
+                    ? 'Both players finished with the same score. Well played.'
+                    : isCurrentUser(sortedScores[0])
+                        ? 'You finished on top. Strong pace and accuracy.'
+                        : 'Your opponent finished ahead this round. Queue again and run it back.';
 
             return (
-                <div className="card" style={{ maxWidth: 500, margin: '2rem auto', textAlign: 'center', padding: '3rem 2rem' }}>
+                <div className="card" style={{ maxWidth: 620, margin: '2rem auto', textAlign: 'center', padding: '3rem 2rem', boxShadow: 'var(--shadow-lg)' }}>
                     <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{resultTitle}</h1>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '2rem 0' }}>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '1.75rem', fontSize: '1rem' }}>{resultSummary}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', margin: '2rem 0', textAlign: 'left' }}>
                         {sortedScores.map((p, i) => (
-                            <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-surface)', borderRadius: 8, border: isCurrentUser(p.id) ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{i+1}. {p.name}</span>
-                        <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem' }}>{p.score} pts</span>
+                            <div key={p.socketId || p.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.1rem', background: 'var(--bg-surface)', borderRadius: 12, border: isCurrentUser(p) ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '1.08rem' }}>{i + 1}. {p.name}{isCurrentUser(p) ? ' (You)' : ''}</span>
+                                <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.15rem' }}>{p.score} pts</span>
                             </div>
                         ))}
                     </div>
