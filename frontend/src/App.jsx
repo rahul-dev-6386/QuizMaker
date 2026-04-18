@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Navbar from './components/Navbar';
@@ -19,6 +19,7 @@ import BattlePage from './pages/BattlePage';
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -28,7 +29,9 @@ function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/signin" replace state={{ from: location }} />;
+  }
   if (adminOnly && user.role !== 'admin') return <Navigate to="/admin-auth" replace />;
   return children;
 }

@@ -5,7 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MathText from '../components/MathText';
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SOCKET_SERVER_URL =
+    import.meta.env.VITE_API_BASE_URL?.trim() ||
+    import.meta.env.VITE_API_URL?.trim() ||
+    'http://localhost:3000';
 
 export default function BattlePage() {
     const { user } = useAuth();
@@ -34,7 +37,7 @@ export default function BattlePage() {
 
     useEffect(() => {
         if (!user) {
-            navigate('/auth');
+            navigate('/signin');
             return;
         }
 
