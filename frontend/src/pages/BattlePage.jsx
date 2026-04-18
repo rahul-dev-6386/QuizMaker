@@ -14,6 +14,7 @@ export default function BattlePage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const socketRef = useRef(null);
+    const currentUserId = String(user?.id || user?._id || '');
 
     const [status, setStatus] = useState('idle'); // idle, queue, active, result
     const [selectedCategory, setSelectedCategory] = useState('General');
@@ -139,7 +140,7 @@ export default function BattlePage() {
         }, 1000);
 
         socketRef.current.emit('joinQueue', {
-            userId: user.id || user._id,
+            userId: currentUserId,
             name: user.name,
             category: selectedCategory
         });
@@ -304,14 +305,15 @@ export default function BattlePage() {
     const renderActiveData = () => {
         if (!gameState.questions.length) return null;
         const q = gameState.questions[gameState.currentQ];
+        const isCurrentUser = (playerId) => String(playerId || '') === currentUserId;
         
         return (
             <div style={{ maxWidth: 900, margin: '2rem auto' }}>
                 {/* Scoreboard */}
                 <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: '#1e293b', color: '#fff' }}>
                     {gameState.players.map((p, i) => (
-                        <div key={p.id || i} style={{ textAlign: i === 0 ? 'left' : 'right', borderBottom: p.id === (user.id || user._id) ? '3px solid var(--accent)' : 'none' }}>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name} {p.id === (user.id || user._id) && '(You)'}</div>
+                        <div key={p.id || i} style={{ textAlign: i === 0 ? 'left' : 'right', borderBottom: isCurrentUser(p.id) ? '3px solid var(--accent)' : 'none' }}>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name} {isCurrentUser(p.id) && '(You)'}</div>
                             <div style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>{p.score} pts</div>
                             <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Q {p.currentQ + 1} / {gameState.questions.length}</div>
                         </div>
@@ -356,24 +358,35 @@ export default function BattlePage() {
     };
 
     const renderResult = () => (
-        <div className="card" style={{ maxWidth: 500, margin: '2rem auto', textAlign: 'center', padding: '3rem 2rem' }}>
-            <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-                {gameState.winnerId === null
+        (() => {
+            const isCurrentUser = (playerId) => String(playerId || '') === currentUserId;
+            const sortedScores = [...gameState.finalScores].sort((a, b) => b.score - a.score);
+            const topScore = sortedScores[0]?.score;
+            const leaders = sortedScores.filter((p) => p.score === topScore);
+            const currentPlayer = sortedScores.find((p) => isCurrentUser(p.id));
+            const resultTitle = !currentPlayer || topScore === undefined
+                ? 'Battle Complete'
+                : leaders.length > 1
                     ? '🤝 Draw'
-                    : gameState.winnerId === (user.id || user._id)
+                    : isCurrentUser(sortedScores[0]?.id)
                         ? '🎉 You Won!'
-                        : '😔 You Lost'}
-            </h1>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '2rem 0' }}>
-                {[...gameState.finalScores].sort((a, b) => b.score - a.score).map((p, i) => (
-                    <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-surface)', borderRadius: 8, border: p.id === (user.id || user._id) ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
+                        : '😔 You Lost';
+
+            return (
+                <div className="card" style={{ maxWidth: 500, margin: '2rem auto', textAlign: 'center', padding: '3rem 2rem' }}>
+                    <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{resultTitle}</h1>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', margin: '2rem 0' }}>
+                        {sortedScores.map((p, i) => (
+                            <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'var(--bg-surface)', borderRadius: 8, border: isCurrentUser(p.id) ? '2px solid var(--primary)' : '1px solid var(--border)' }}>
                         <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{i+1}. {p.name}</span>
                         <span style={{ color: 'var(--accent)', fontWeight: 'bold', fontSize: '1.2rem' }}>{p.score} pts</span>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
-            <button className="btn btn-primary" onClick={() => setStatus('idle')} style={{ width: '100%' }}>Play Again</button>
-        </div>
+                    <button className="btn btn-primary" onClick={() => setStatus('idle')} style={{ width: '100%' }}>Play Again</button>
+                </div>
+            );
+        })()
     );
 
     return (

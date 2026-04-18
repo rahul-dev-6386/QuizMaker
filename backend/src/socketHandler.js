@@ -19,6 +19,36 @@ const ioConfig = {
   }
 };
 
+async function getBattleQuestions(category, count = 5) {
+  const matchStage =
+    category === "General"
+      ? { questions: { $exists: true, $ne: [] } }
+      : { category, questions: { $exists: true, $ne: [] } };
+
+  const sampledQuestions = await Quiz.aggregate([
+    { $match: matchStage },
+    { $unwind: "$questions" },
+    { $sample: { size: count } },
+    {
+      $project: {
+        _id: 0,
+        quizId: "$_id",
+        questionId: "$questions._id",
+        question: "$questions.question",
+        questionImage: { $ifNull: ["$questions.questionImage", ""] },
+        options: "$questions.options",
+        correctAnswer: "$questions.correctAnswer",
+      },
+    },
+  ]);
+
+  return sampledQuestions.map((question) => ({
+    ...question,
+    quizId: String(question.quizId),
+    questionId: String(question.questionId),
+  }));
+}
+
 export function setupSocketServer(server) {
   const io = new Server(server, ioConfig);
 
@@ -41,9 +71,11 @@ export function setupSocketServer(server) {
     broadcastStats();
 
     socket.on("joinQueue", async ({ userId, name, category = "General" }) => {
+      const normalizedUserId = String(userId || "");
+
       // Basic queueing
       if (!queues[category]) queues[category] = [];
-      queues[category].push({ socketId: socket.id, userId, name });
+      queues[category].push({ socketId: socket.id, userId: normalizedUserId, name });
 
       socket.join(`queue_${category}`);
       broadcastStats();
@@ -55,21 +87,12 @@ export function setupSocketServer(server) {
 
         const roomId = `room_${Date.now()}_${Math.random()}`;
         
-        // Fetch random questions for this category
-        const randomQuizzes = await Quiz.aggregate([
-          { $match: { category: category === "General" ? { $exists: true } : category } },
-          { $sample: { size: 1 } }
-        ]);
-        
-        let questions = [];
-        if (randomQuizzes.length > 0) {
-            questions = randomQuizzes[0].questions.slice(0, 5); // 5 questions for battle
-        }
+        const questions = await getBattleQuestions(category, 5);
 
         activeGames[roomId] = {
             players: [
-                { id: p1.userId, socketId: p1.socketId, name: p1.name, score: 0, currentQ: 0 },
-                { id: p2.userId, socketId: p2.socketId, name: p2.name, score: 0, currentQ: 0 }
+                { id: String(p1.userId), socketId: p1.socketId, name: p1.name, score: 0, currentQ: 0 },
+                { id: String(p2.userId), socketId: p2.socketId, name: p2.name, score: 0, currentQ: 0 }
             ],
             questions,
             category,
@@ -84,7 +107,7 @@ export function setupSocketServer(server) {
         io.to(roomId).emit("gameStart", {
             roomId,
             players: activeGames[roomId].players.map((p) => ({
-              id: p.id,
+              id: String(p.id),
               name: p.name,
               score: 0,
               currentQ: 0,
@@ -111,7 +134,7 @@ export function setupSocketServer(server) {
             // Broadcast score update
             io.to(roomId).emit("scoreUpdate", {
                 players: game.players.map((p) => ({
-                    id: p.id,
+                    id: String(p.id),
                     name: p.name,
                     score: p.score,
                     currentQ: p.currentQ,
@@ -130,7 +153,7 @@ export function setupSocketServer(server) {
                     winnerId: winner?.id || null,
                     winnerName: winner?.name || null,
                     finalScores: game.players.map((p) => ({
-                        id: p.id,
+                        id: String(p.id),
                         name: p.name,
                         score: p.score,
                     })),
