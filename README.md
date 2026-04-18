@@ -173,25 +173,64 @@ Health check:
 GET http://localhost:3000/health
 ```
 
-## Deploy Backend (Render, Free Tier)
+## Deploy On Render
 
-This repo includes a root `render.yaml` blueprint for backend deployment.
+This repo includes a root `render.yaml` blueprint that can deploy:
+- `quizmaster-backend` as a Render web service
+- `quizmaster-frontend` as a Render static site
 
-1. Push latest code to GitHub.
+### Before You Push
+
+Make sure you do not commit:
+- local secret files such as `backend/.env`
+- temporary test files
+- local workspace metadata such as `.codex`
+
+### Render Blueprint Flow
+
+1. Push the latest code to GitHub.
 2. In Render, click `New` -> `Blueprint`.
-3. Connect this repository and select the default branch.
-4. Render will detect `render.yaml` and create `quizmaster-backend`.
-5. In Render service settings, set environment variables:
-   - `MONGO_URL`
-   - `ACCESS_SECRET`
-   - `REFRESH_SECRET`
-   - `ADMIN_AUTH_KEY`
-   - `ADMIN_SECRET`
-   - `GEMINI_API_KEY` (optional)
-6. Trigger deploy and verify:
-   - `https://<your-render-service>.onrender.com/health`
+3. Connect this repository and select the branch you want to deploy.
+4. Render will detect `render.yaml` and create both services.
 
-You can use `backend/.env.example` as the source template for env variable names.
+### Backend Environment Variables
+
+Set these on `quizmaster-backend`:
+- `MONGO_URL`
+- `ACCESS_SECRET`
+- `REFRESH_SECRET`
+- `ADMIN_AUTH_KEY`
+- `ADMIN_SECRET`
+- `CLIENT_ORIGIN`
+- `EMAIL_USER`
+- `EMAIL_APP_PASSWORD`
+- `MAIL_FROM`
+- `GEMINI_API_KEY` (optional)
+
+Notes:
+- `CLIENT_ORIGIN` should be the exact frontend URL in production.
+- If you want both local development and Render frontend to work, you can provide a comma-separated list, for example:
+  `https://your-frontend.onrender.com,http://localhost:5173`
+- `COOKIE_SECURE` is already set to `true` in `render.yaml`, which is correct for HTTPS on Render.
+
+### Frontend Environment Variables
+
+Set these on `quizmaster-frontend`:
+- `VITE_API_BASE_URL`
+
+Use the full backend URL, for example:
+
+```env
+VITE_API_BASE_URL=https://quizmaster-backend.onrender.com
+```
+
+### Verify Deployment
+
+Check:
+- Backend health: `https://<your-backend-service>.onrender.com/health`
+- Frontend loads successfully and can sign in/sign up against the backend
+
+You can use `backend/.env.example` and `frontend/.env.example` as the source templates for env variable names.
 
 ## Frontend Setup
 
