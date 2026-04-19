@@ -98,7 +98,8 @@ export const getAttemptReport = (attemptId) => API.get(`/quiz/report/${attemptId
 /* ——— Admin ——— */
 export const createQuiz = (data) => API.post('/admin/quiz/create', data);
 export const generateQuizWithAI = (data) => API.post('/admin/quiz/generate', data);
-export const authenticateAdmin = (data) => API.post('/admin/authenticate', data);
+export const requestAdminOtp = (data) => API.post('/admin/request-otp', data);
+export const verifyAdminOtp = (data) => API.post('/admin/verify-otp', data);
 export const getAdminQuizzes = () => API.get('/admin/quizzes');
 export const deleteAdminQuiz = (quizId) => API.delete(`/admin/quiz/${quizId}`);
 export const mergeAdminQuizzes = (data) => API.post('/admin/quiz/merge', data);

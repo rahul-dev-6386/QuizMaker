@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authenticateAdmin } from '../api';
+import { requestAdminOtp, verifyAdminOtp } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminAuth() {
     const { login, user } = useAuth();
     const navigate = useNavigate();
+    const [step, setStep] = useState('key'); // 'key' | 'otp'
     const [key, setKey] = useState('');
+    const [otp, setOtp] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
+    const handleRequestOtp = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
+
         if (!key.trim()) {
             setError('Please enter the admin access key.');
             return;
@@ -20,12 +25,33 @@ export default function AdminAuth() {
 
         setLoading(true);
         try {
-            const res = await authenticateAdmin({ key: key.trim() });
-            login(res.data.user);
+            const res = await requestAdminOtp({ key: key.trim() });
+            setSuccess(res.data.message || 'OTP sent to the platform administrator.');
+            setStep('otp');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Verification failed. Invalid key.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    const handleVerifyOtp = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        if (!otp.trim() || otp.trim().length !== 6) {
+            setError('Please enter a valid 6-digit OTP.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await verifyAdminOtp({ key: key.trim(), otp: otp.trim() });
+            login(res.data.user);
             navigate('/admin');
         } catch (err) {
-            setError(err.response?.data?.message || 'Authentication failed. Invalid key.');
+            setError(err.response?.data?.message || 'OTP verification failed.');
         } finally {
             setLoading(false);
         }
@@ -70,41 +96,94 @@ export default function AdminAuth() {
                             ✕ {error}
                         </div>
                     )}
-
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div className="form-group">
-                            <label className="form-label">Access Key</label>
-                            <input
-                                className="form-input"
-                                type="password"
-                                placeholder="Enter admin key..."
-                                value={key}
-                                onChange={(e) => {
-                                    setKey(e.target.value);
-                                    setError('');
-                                }}
-                                autoFocus
-                            />
+                    {success && (
+                        <div className="alert alert-success" style={{ marginBottom: '1.25rem' }}>
+                            ✓ {success}
                         </div>
+                    )}
 
-                        <button
-                            type="submit"
-                            className="btn btn-primary btn-lg"
-                            disabled={loading}
-                            style={{
-                                width: '100%',
-                                marginTop: '0.5rem',
-                                background: 'linear-gradient(135deg, var(--danger), #ff8a65)'
-                            }}
-                        >
-                            {loading ? (
-                                <>
-                                    <div className="spinner" style={{ width: 16, height: 16 }} />
-                                    Authenticating…
-                                </>
-                            ) : 'Gain Access →'}
-                        </button>
-                    </form>
+                    {step === 'key' ? (
+                        <form onSubmit={handleRequestOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">Access Key</label>
+                                <input
+                                    className="form-input"
+                                    type="password"
+                                    placeholder="Enter admin key..."
+                                    value={key}
+                                    onChange={(e) => {
+                                        setKey(e.target.value);
+                                        setError('');
+                                    }}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn-primary btn-lg"
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    marginTop: '0.5rem',
+                                    background: 'linear-gradient(135deg, var(--danger), #ff8a65)'
+                                }}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="spinner" style={{ width: 16, height: 16 }} />
+                                        Verifying Key…
+                                    </>
+                                ) : 'Continue →'}
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div className="form-group">
+                                <label className="form-label">Security Code (OTP)</label>
+                                <input
+                                    className="form-input"
+                                    type="text"
+                                    placeholder="Enter 6-digit code..."
+                                    value={otp}
+                                    maxLength={6}
+                                    onChange={(e) => {
+                                        setOtp(e.target.value);
+                                        setError('');
+                                    }}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="btn btn-primary btn-lg"
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    marginTop: '0.5rem',
+                                    background: 'linear-gradient(135deg, var(--danger), #ff8a65)'
+                                }}
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="spinner" style={{ width: 16, height: 16 }} />
+                                        Authenticating…
+                                    </>
+                                ) : 'Gain Access →'}
+                            </button>
+                            
+                            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={() => setStep('key')}
+                                >
+                                    ← Back to Key Entry
+                                </button>
+                            </div>
+                        </form>
+                    )}
 
                     <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
                         <button

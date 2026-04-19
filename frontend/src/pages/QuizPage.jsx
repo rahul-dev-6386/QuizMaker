@@ -66,8 +66,8 @@ export default function QuizPage() {
                     setQuizMeta({ quizId: qs[0].quizId });
                     setVisited({ [qs[0].questionId]: true });
                 }
-                // Assign 60 seconds (1 minute) per question instead of the harsh 15-second default
-                const totalTime = qs.reduce((sum, q) => sum + (q.timeLimit || 60), 0);
+                // 1 minute per question as per user request for offline quizzes
+                const totalTime = qs.length * 60;
                 setTimeLeft(totalTime);
             } catch (err) {
                 const code = err.response?.data?.code;
@@ -239,12 +239,12 @@ export default function QuizPage() {
     const qStatus = getQuestionStatus(q.questionId, visited, selected, review);
 
     return (
-        <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '2rem', maxWidth: '1360px' }}>
+        <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '2rem', maxWidth: '1560px' }}>
             <div
                 style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 320px',
-                    gap: '1rem',
+                    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0,1fr) 340px',
+                    gap: '1.5rem',
                 }}
             >
                 <div className="card" style={{ padding: '1.25rem' }}>
@@ -375,14 +375,24 @@ export default function QuizPage() {
                         >
                             Previous
                         </button>
-                        <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => handleSubmit(false)}
-                            disabled={submitting}
-                        >
-                            {submitting ? 'Submitting...' : 'Submit Quiz'}
-                        </button>
+                        {current < questions.length - 1 ? (
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => setCurrent((c) => c + 1)}
+                            >
+                                Next
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={() => handleSubmit(false)}
+                                disabled={submitting}
+                            >
+                                {submitting ? 'Submitting...' : 'Submit Quiz'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -444,6 +454,16 @@ export default function QuizPage() {
                         <div>Answered & Marked: {statusCounts.answeredMarked}</div>
                         <div>Answered: {statusCounts.answered}</div>
                     </div>
+                    
+                    <button
+                        type="button"
+                        className="btn btn-primary btn-lg"
+                        style={{ width: '100%', marginTop: '1.5rem' }}
+                        onClick={() => handleSubmit(false)}
+                        disabled={submitting}
+                    >
+                        {submitting ? 'Submitting...' : 'Submit Quiz Directly'}
+                    </button>
                 </div>
             </div>
         </div>

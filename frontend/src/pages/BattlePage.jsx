@@ -213,7 +213,7 @@ export default function BattlePage() {
     }, [status, selectedOption, timeElapsed]);
 
     const renderIdle = () => (
-        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <div style={{ maxWidth: 1560, margin: '0 auto' }}>
             {/* Standard Page Header */}
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -232,10 +232,35 @@ export default function BattlePage() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                {/* Left Card: Information */}
-                <div className="card">
-                    <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-primary)' }}>How It Works</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.35fr) minmax(400px, 0.65fr)', gap: '1.5rem', alignItems: 'start' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Matchmaking Action */}
+                    <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Start A Battle</h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                            Queue for a live head-to-head match. We&apos;ll pair you with the next learner in the same topic.
+                        </p>
+                        
+                        <div className="form-group" style={{ marginBottom: '2rem' }}>
+                            <label className="form-label">Category</label>
+                            <select className="form-input" style={{ fontSize: '1rem', padding: '0.75rem', marginBottom: '0.5rem' }} value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                                {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
+                                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', marginRight: 6 }}></span>
+                                {lobbyStats[selectedCategory] || 0} users playing <strong>{selectedCategory}</strong>
+                            </div>
+                        </div>
+                        
+                        <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={joinQueue}>
+                            Find Match
+                        </button>
+                    </div>
+
+                    {/* Left Card: Information */}
+                    <div className="card">
+                        <h2 style={{ fontSize: '1.2rem', marginBottom: '1.25rem', color: 'var(--text-primary)' }}>How It Works</h2>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', gap: '1rem' }}>
@@ -264,36 +289,13 @@ export default function BattlePage() {
                     </div>
                 </div>
 
-                {/* Right Card: Matchmaking Action */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <h2 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Start A Battle</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                        Queue for a live head-to-head match. We&apos;ll pair you with the next learner in the same topic.
-                    </p>
-                    
-                    <div className="form-group" style={{ marginBottom: '2rem' }}>
-                        <label className="form-label">Category</label>
-                        <select className="form-input" style={{ fontSize: '1rem', padding: '0.75rem', marginBottom: '0.5rem' }} value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                            {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--success)', marginRight: 6 }}></span>
-                            {lobbyStats[selectedCategory] || 0} users playing <strong>{selectedCategory}</strong>
-                        </div>
-                    </div>
-                    
-                    <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={joinQueue}>
-                        Find Match
-                    </button>
-                </div>
-            </div>
-
-            {stats?.battleStats && (
-                <div className="card" style={{
-                    marginTop: '2.25rem',
-                    background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(15,159,168,0.08))',
-                    borderColor: 'rgba(15,159,168,0.18)',
-                }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {stats?.battleStats && (
+                    <div className="card" style={{
+                        background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(15,159,168,0.08))',
+                        borderColor: 'rgba(15,159,168,0.18)',
+                        height: '100%',
+                    }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                         <div>
                             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.3rem' }}>
@@ -411,8 +413,9 @@ export default function BattlePage() {
                             </div>
                         </div>
                     </div>
+                )}
                 </div>
-            )}
+            </div>
         </div>
     );
 

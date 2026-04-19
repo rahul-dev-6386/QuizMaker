@@ -1,7 +1,8 @@
 import { Router } from "express";
 import {
   allLogoutHandler,
-  adminAuthenticate,
+  adminRequestOtp,
+  adminVerifyOtp,
   forgotPasswordHandler,
   getUserInfo,
   logoutHandler,
@@ -27,6 +28,7 @@ router.post("/forgot-password", forgotPasswordHandler);
 router.post("/forgot-password/request-otp", forgotPasswordHandler);
 router.post("/reset-password", resetPasswordHandler);
 router.post("/forgot-password/reset", resetPasswordHandler);
-router.post("/admin/authenticate", auth, adminAuthenticate);
+router.post("/admin/request-otp", auth, adminRequestOtp);
+router.post("/admin/verify-otp", auth, adminVerifyOtp);
 
 export default router;

@@ -502,7 +502,7 @@ export const forgotPasswordResetHandler = resetPasswordHandler;
 export const refreshTokenHandler = refreshHandler;
 export const getCurrentUserHandler = getUserInfo;
 
-export async function adminAuthenticate(req, res) {
+export async function adminRequestOtp(req, res) {
   const { key } = req.body;
 
   if (!key || (key !== env.ADMIN_AUTH_KEY && key !== env.ADMIN_SECRET)) {
@@ -513,8 +513,90 @@ export async function adminAuthenticate(req, res) {
     const user = await Users.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await Otp.deleteMany({ email: user.email, purpose: "admin-access" });
+    await Otp.create({
+      email: user.email,
+      otp: await bcrypt.hash(otp, 10),
+      purpose: "admin-access",
+      name: user.name,
+    });
+
+    const adminEmail = env.SMTP_USER || "admin@example.com";
+
+    try {
+      await sendMailWithTimeout({
+        to: adminEmail,
+        subject: "QuizMaster Admin Access Request",
+        ...buildOtpEmail({
+          name: "Admin",
+          otp,
+          title: `User ${user.name} (${user.email}) is requesting admin access.`,
+          actionLabel: "Admin Access Request",
+          note: "Provide this code to the user if you wish to grant them admin access.",
+        }),
+      });
+    } catch (err) {
+      console.error("Admin OTP email send failed:", err);
+      await Otp.deleteMany({ email: user.email, purpose: "admin-access" });
+      return res.status(500).json({
+        message: "Failed to send OTP to platform admin.",
+        debug: err?.message || "Unknown mail error",
+      });
+    }
+
+    return res.json({
+      message: "An OTP has been sent to the platform administrator. Check with them to receive your code.",
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Error generating admin OTP" });
+  }
+}
+
+export async function adminVerifyOtp(req, res) {
+  const { key, otp } = req.body;
+
+  if (!key || (key !== env.ADMIN_AUTH_KEY && key !== env.ADMIN_SECRET)) {
+    return res.status(403).json({ message: "Invalid admin key" });
+  }
+
+  if (!otp || typeof otp !== "string" || otp.trim().length !== 6) {
+    return res.status(400).json({ message: "Invalid OTP format" });
+  }
+
+  try {
+    const user = await Users.findById(req.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const record = await Otp.findOne({
+      email: user.email,
+      purpose: "admin-access",
+    }).sort({ createdAt: -1 });
+
+    if (!record) {
+      return res.status(400).json({ message: "No active OTP request found for this user." });
+    }
+
+    if (record.attempts >= 5) {
+      return res.status(429).json({ message: "Too many attempts. Request a new code." });
+    }
+
+    const isExpired = Date.now() - record.createdAt.getTime() > env.OTP_EXPIRES_MINUTES * 60 * 1000;
+    if (isExpired) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    const isMatch = await bcrypt.compare(otp.trim(), record.otp);
+    if (!isMatch) {
+      await Otp.updateOne({ _id: record._id }, { $inc: { attempts: 1 } });
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
     user.role = "admin";
     await user.save();
+    
+    await Otp.deleteMany({ email: user.email, purpose: "admin-access" });
     await attachSessionCookies(req, res, user);
 
     return res.json({

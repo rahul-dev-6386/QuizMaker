@@ -30,7 +30,8 @@ project/
 - OTP-based signup verification
 - Forgot-password flow with OTP verification
 - Access token + refresh token session flow with secure cookies
-- Role-based access (`user` and `admin`)
+- Role-based access (`user` and `admin`) with 2-step OTP verification for Admin Access
+- Live Multiplayer 1v1 Battles with real-time matchmaking and analytics
 - Quiz listing and randomized question generation
 - Quiz submission with scoring and retake flow
 - Attempt history and dashboard analytics
@@ -64,7 +65,8 @@ project/
 - `POST /auth/refresh`
 - `POST /auth/logout`
 - `GET /auth/me`
-- `POST /admin/authenticate`
+- `POST /admin/request-otp`
+- `POST /admin/verify-otp`
 
 - Quiz
 - `GET /quizzes`
@@ -158,8 +160,9 @@ Auth flow now works like this:
 - Backend issues a short-lived access token and a longer-lived refresh token in cookies.
 - When the access token expires, the frontend calls `/auth/refresh` automatically using the refresh token cookie.
 - Forgot password follows the same OTP pattern before the password is changed.
+- Admin access upgrades require 2-step verification. The user submits the admin key, which triggers an OTP sent to the `SMTP_USER` email address (the platform owner). The owner provides the code to the user to finalize the upgrade.
 
-Note: OTP delivery currently logs the OTP on the backend server console for development, and also returns `otpPreview` outside production. That keeps the flow usable until you wire your real email credentials in `.env` and replace the delivery logic.
+Note: OTP delivery uses `nodemailer` to dispatch secure codes to users (and administrators). Ensure your `backend/.env` has proper `SMTP_USER` and `SMTP_PASS` parameters configured.
 
 Run backend:
 

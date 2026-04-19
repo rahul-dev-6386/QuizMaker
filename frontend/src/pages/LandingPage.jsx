@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BotIcon, ChartIcon, KeyIcon, LogoIcon, QuizIcon, ShieldIcon } from '../components/Icons';
+import { BotIcon, ChartIcon, KeyIcon, LogoIcon, QuizIcon, ShieldIcon, TrophyIcon } from '../components/Icons';
 
 const FEATURES = [
     {
@@ -17,6 +17,11 @@ const FEATURES = [
         icon: ChartIcon,
         title: 'Progress Visibility',
         desc: 'Track attempts, scores, and performance trends through a straightforward dashboard experience.',
+    },
+    {
+        icon: TrophyIcon,
+        title: 'Live Multiplayer Battles',
+        desc: 'Queue against other learners in real-time, 5-question face-offs to test your speed and accuracy under pressure.',
     },
 ];
 
