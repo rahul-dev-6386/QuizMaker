@@ -288,6 +288,7 @@ export default function BattlePage() {
                         </div>
                     </div>
                 </div>
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {stats?.battleStats && (
@@ -413,6 +414,7 @@ export default function BattlePage() {
                             </div>
                         </div>
                     </div>
+                </div>
                 )}
                 </div>
             </div>
