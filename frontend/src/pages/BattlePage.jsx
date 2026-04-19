@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { getAllQuizzes } from '../api';
+import { getAllQuizzes, getDashboardStats } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import MathText from '../components/MathText';
@@ -22,7 +22,14 @@ export default function BattlePage() {
     const [categoryOptions, setCategoryOptions] = useState(['General']);
     const [lobbyStats, setLobbyStats] = useState({});
     const [queueWait, setQueueWait] = useState(0);
+    const [stats, setStats] = useState(null);
     const queueTimerRef = useRef(null);
+
+    const battlePeriods = [
+        { key: 'daily', label: 'Daily' },
+        { key: 'weekly', label: 'Weekly' },
+        { key: 'monthly', label: 'Monthly' },
+    ];
     
     const [gameState, setGameState] = useState({
         roomId: null,
@@ -55,7 +62,10 @@ export default function BattlePage() {
 
         (async () => {
             try {
-                const res = await getAllQuizzes();
+                const [res, statsRes] = await Promise.all([
+                    getAllQuizzes(),
+                    getDashboardStats()
+                ]);
                 const categories = Array.from(
                     new Set((res.data.quizzes || []).map((q) => q.category).filter(Boolean))
                 );
@@ -63,8 +73,9 @@ export default function BattlePage() {
                     categories.unshift('General');
                 }
                 setCategoryOptions(categories);
+                setStats(statsRes.data);
             } catch (err) {
-                console.error('Failed to load categories', err);
+                console.error('Failed to load data', err);
             }
         })();
 
@@ -276,6 +287,132 @@ export default function BattlePage() {
                     </button>
                 </div>
             </div>
+
+            {stats?.battleStats && (
+                <div className="card" style={{
+                    marginTop: '2.25rem',
+                    background: 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(15,159,168,0.08))',
+                    borderColor: 'rgba(15,159,168,0.18)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+                        <div>
+                            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                                Live Battle Analysis
+                            </h2>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+                                Your real-time 1v1 record updates automatically after every completed battle.
+                            </p>
+                        </div>
+                        <span className="badge" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.22)' }}>
+                            ⚔️ Multiplayer Stats
+                        </span>
+                    </div>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                        gap: '1rem',
+                    }}>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Matches</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.3rem' }}>{stats?.battleStats?.matches ?? 0}</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(15,159,110,0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Wins</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--success)', marginTop: '0.3rem' }}>{stats?.battleStats?.wins ?? 0}</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(209,67,67,0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Losses</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--danger)', marginTop: '0.3rem' }}>{stats?.battleStats?.losses ?? 0}</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(200,129,26,0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Draws</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--warning)', marginTop: '0.3rem' }}>{stats?.battleStats?.draws ?? 0}</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(21,94,239,0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Win Rate</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.3rem' }}>{Math.round(stats?.battleStats?.winRate ?? 0)}%</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(15,159,168,0.2)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Current Streak</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginTop: '0.3rem' }}>{stats?.battleStats?.currentStreak ?? 0}</div>
+                        </div>
+                        <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(251,191,36,0.24)' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Best Streak</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.3rem' }}>{stats?.battleStats?.bestStreak ?? 0}</div>
+                        </div>
+                    </div>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: '1rem',
+                        marginTop: '1.25rem',
+                    }}>
+                        <div style={{ padding: '1rem', borderRadius: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                            <h3 style={{ fontSize: '1rem', marginBottom: '0.8rem' }}>Recent Battle History</h3>
+                            {(stats?.battleStats?.recent || []).length === 0 ? (
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No live battles recorded yet.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                                    {stats.battleStats.recent.map((match) => {
+                                        const resultColor =
+                                            match.result === 'win'
+                                                ? 'var(--success)'
+                                                : match.result === 'loss'
+                                                    ? 'var(--danger)'
+                                                    : 'var(--warning)';
+                                        return (
+                                            <div key={match.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderRadius: 12, background: 'var(--bg-subtle)' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 700, color: resultColor, textTransform: 'capitalize' }}>{match.result}</div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                                                        vs {match.opponentName} · {match.category}
+                                                    </div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontWeight: 800 }}>{match.score} - {match.opponentScore}</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                                        {new Date(match.completedAt).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ padding: '1rem', borderRadius: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                            <h3 style={{ fontSize: '1rem', marginBottom: '0.8rem' }}>Battle Leaderboards</h3>
+                            <div style={{ display: 'grid', gap: '0.9rem' }}>
+                                {battlePeriods.map((period) => {
+                                    const leaders = stats?.battleStats?.leaderboard?.[period.key] || [];
+                                    return (
+                                        <div key={period.key}>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
+                                                {period.label} Top Wins
+                                            </div>
+                                            {leaders.length === 0 ? (
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No winners yet.</p>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                                                    {leaders.map((leader, index) => (
+                                                        <div key={`${period.key}-${leader._id || index}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'var(--bg-subtle)' }}>
+                                                            <span style={{ fontWeight: 700 }}>{index + 1}. {leader.name}</span>
+                                                            <span style={{ color: 'var(--success)', fontWeight: 800 }}>{leader.wins} win{leader.wins === 1 ? '' : 's'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 
