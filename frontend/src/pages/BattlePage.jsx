@@ -9,6 +9,7 @@ const SOCKET_SERVER_URL =
     import.meta.env.VITE_API_BASE_URL?.trim() ||
     import.meta.env.VITE_API_URL?.trim() ||
     'http://localhost:3000';
+const QUESTION_TIME_LIMIT = 20;
 
 export default function BattlePage() {
     const { user } = useAuth();
@@ -125,6 +126,7 @@ export default function BattlePage() {
     }, [queueWait, status]);
 
     const startQuestionTimer = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setTimeElapsed(0);
         timerRef.current = setInterval(() => {
             setTimeElapsed(prev => prev + 1);
@@ -132,7 +134,10 @@ export default function BattlePage() {
     };
 
     const stopQuestionTimer = () => {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
     };
 
     const joinQueue = () => {
@@ -163,10 +168,12 @@ export default function BattlePage() {
 
     const submitAnswer = (optIndex) => {
         if (selectedOption !== null) return; // already answered
-        setSelectedOption(optIndex);
+        const answerIndex = optIndex ?? -1;
+        setSelectedOption(answerIndex);
         
         const q = gameState.questions[gameState.currentQ];
-        const isCorrect = String(q.correctAnswer) === String(optIndex);
+        if (!q) return;
+        const isCorrect = String(q.correctAnswer) === String(answerIndex);
 
         socketRef.current.emit('submitAnswer', {
             roomId: gameState.roomId,
@@ -187,6 +194,12 @@ export default function BattlePage() {
             }
         }, 1500);
     };
+
+    useEffect(() => {
+        if (status !== 'active' || selectedOption !== null) return;
+        if (timeElapsed < QUESTION_TIME_LIMIT) return;
+        submitAnswer(null);
+    }, [status, selectedOption, timeElapsed]);
 
     const renderIdle = () => (
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -328,7 +341,7 @@ export default function BattlePage() {
                             </div>
                             <div style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{p.name}{isCurrentUser(p) ? ' (You)' : ''}</div>
                             <div style={{ fontSize: '1.65rem', color: '#3dd9d1', marginTop: '0.35rem' }}>{p.score} pts</div>
-                            <div style={{ fontSize: '0.82rem', opacity: 0.82, marginTop: '0.35rem' }}>Answered {Math.min((p.currentQ || 0) + 1, gameState.questions.length)} / {gameState.questions.length}</div>
+                            <div style={{ fontSize: '0.82rem', opacity: 0.82, marginTop: '0.35rem' }}>Answered {Math.min(p.answeredCount || 0, gameState.questions.length)} / {gameState.questions.length}</div>
                         </div>
                     ))}
                 </div>
@@ -337,12 +350,12 @@ export default function BattlePage() {
                 <div className="card" style={{ padding: '2rem', boxShadow: 'var(--shadow-lg)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                         <span style={{ fontWeight: 'bold', color: 'var(--primary)', fontSize: '0.95rem' }}>Question {gameState.currentQ + 1} of {gameState.questions.length}</span>
-                        <span className="badge" style={{ background: timeElapsed > 10 ? 'var(--danger-bg)' : 'var(--bg-subtle)', color: timeElapsed > 10 ? 'var(--danger)' : 'var(--text-secondary)', border: '1px solid var(--border)' }}>⏱ {timeElapsed}s elapsed</span>
+                        <span className="badge" style={{ background: timeElapsed > 10 ? 'var(--danger-bg)' : 'var(--bg-subtle)', color: timeElapsed > 10 ? 'var(--danger)' : 'var(--text-secondary)', border: '1px solid var(--border)' }}>⏱ {timeElapsed}s / {QUESTION_TIME_LIMIT}s</span>
                     </div>
 
                     <h2 style={{ fontSize: '1.7rem', marginBottom: '0.8rem', lineHeight: 1.35 }}><MathText text={q.question} /></h2>
                     <p style={{ color: 'var(--text-secondary)', marginBottom: '1.75rem', fontSize: '0.95rem' }}>
-                        Select one answer. Faster correct answers earn more points.
+                        Select one answer before the timer runs out. Missed questions are submitted automatically.
                     </p>
                     
                     {q.questionImage && <img src={q.questionImage} alt="Question" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: '2rem' }} />}

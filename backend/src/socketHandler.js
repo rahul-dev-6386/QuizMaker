@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import { Quiz, Users } from "./models/index.js";
+import { BattleMatch, Quiz, Users } from "./models/index.js";
 
 // Matchmaking queues per category
 // { "General": [userId, userId2], ... }
@@ -49,40 +49,71 @@ async function getBattleQuestions(category, count = 5) {
   }));
 }
 
-async function recordBattleOutcome(players) {
-  if (!Array.isArray(players) || players.length < 2) return;
+function getPublicPlayers(players) {
+  return players.map((p) => ({
+    id: String(p.id),
+    socketId: p.socketId,
+    name: p.name,
+    score: p.score,
+    answeredCount: p.answeredQuestions?.size || 0,
+  }));
+}
 
-  const [firstPlayer, secondPlayer] = players;
+async function updateWinnerStreak(userId) {
+  const user = await Users.findById(userId);
+  if (!user) return;
 
-  if (firstPlayer.score === secondPlayer.score) {
-    await Users.updateMany(
-      { _id: { $in: [firstPlayer.id, secondPlayer.id] } },
-      { $inc: { battleDraws: 1 } }
-    );
+  user.battleWins = (user.battleWins || 0) + 1;
+  user.battleCurrentStreak = (user.battleCurrentStreak || 0) + 1;
+  user.battleBestStreak = Math.max(user.battleBestStreak || 0, user.battleCurrentStreak);
+  await user.save();
+}
+
+async function updateNonWinnerRecord(userId, field) {
+  await Users.findByIdAndUpdate(userId, {
+    $inc: { [field]: 1 },
+    $set: { battleCurrentStreak: 0 },
+  });
+}
+
+async function persistBattleResult(game, { winner = null, completedReason = "finished" } = {}) {
+  if (!game || game.completed || !Array.isArray(game.players) || game.players.length < 2) {
     return;
   }
 
-  const winner = firstPlayer.score > secondPlayer.score ? firstPlayer : secondPlayer;
-  const loser = winner === firstPlayer ? secondPlayer : firstPlayer;
+  game.completed = true;
 
-  await Promise.all([
-    Users.findByIdAndUpdate(winner.id, { $inc: { battleWins: 1 } }),
-    Users.findByIdAndUpdate(loser.id, { $inc: { battleLosses: 1 } }),
-  ]);
-}
+  const isDraw = !winner;
+  const outcome = completedReason === "disconnect" ? "disconnect" : isDraw ? "draw" : "win";
 
-async function recordDisconnectOutcome(players, disconnectedSocketId) {
-  if (!Array.isArray(players) || players.length < 2) return;
+  await BattleMatch.create({
+    roomId: game.roomId,
+    category: game.category,
+    winnerUserId: winner?.id || null,
+    outcome,
+    completedReason,
+    startedAt: game.startedAt,
+    completedAt: new Date(),
+    players: game.players.map((player) => ({
+      userId: player.id,
+      name: player.name,
+      score: player.score,
+      result: isDraw ? "draw" : player.id === winner.id ? "win" : "loss",
+    })),
+  });
 
-  const loser = players.find((player) => player.socketId === disconnectedSocketId);
-  const winner = players.find((player) => player.socketId !== disconnectedSocketId);
+  if (isDraw) {
+    await Promise.all(game.players.map((player) => updateNonWinnerRecord(player.id, "battleDraws")));
+    return;
+  }
 
-  if (!winner || !loser) return;
-
-  await Promise.all([
-    Users.findByIdAndUpdate(winner.id, { $inc: { battleWins: 1 } }),
-    Users.findByIdAndUpdate(loser.id, { $inc: { battleLosses: 1 } }),
-  ]);
+  await Promise.all(
+    game.players.map((player) =>
+      player.id === winner.id
+        ? updateWinnerStreak(player.id)
+        : updateNonWinnerRecord(player.id, "battleLosses")
+    )
+  );
 }
 
 export function setupSocketServer(server) {
@@ -126,12 +157,15 @@ export function setupSocketServer(server) {
         const questions = await getBattleQuestions(category, 5);
 
         activeGames[roomId] = {
+            roomId,
             players: [
-                { id: String(p1.userId), socketId: p1.socketId, name: p1.name, score: 0, currentQ: 0 },
-                { id: String(p2.userId), socketId: p2.socketId, name: p2.name, score: 0, currentQ: 0 }
+                { id: String(p1.userId), socketId: p1.socketId, name: p1.name, score: 0, answeredQuestions: new Set() },
+                { id: String(p2.userId), socketId: p2.socketId, name: p2.name, score: 0, answeredQuestions: new Set() }
             ],
             questions,
             category,
+            startedAt: new Date(),
+            completed: false,
         };
 
         // Emit to both
@@ -145,7 +179,7 @@ export function setupSocketServer(server) {
           socketId: p.socketId,
           name: p.name,
           score: 0,
-          currentQ: 0,
+          answeredCount: 0,
         }));
 
         io.to(p1.socketId).emit("gameStart", {
@@ -170,7 +204,9 @@ export function setupSocketServer(server) {
 
         const player = game.players.find(p => p.socketId === socket.id);
         if (player) {
-            player.currentQ = questionIndex;
+            if (player.answeredQuestions.has(questionIndex)) return;
+
+            player.answeredQuestions.add(questionIndex);
             if (isCorrect) {
                 // simple score based on time
                 const points = Math.max(10, 100 - (scoreTimeElapsed * 10)); 
@@ -179,34 +215,23 @@ export function setupSocketServer(server) {
 
             // Broadcast score update
             io.to(roomId).emit("scoreUpdate", {
-                players: game.players.map((p) => ({
-                    id: String(p.id),
-                    socketId: p.socketId,
-                    name: p.name,
-                    score: p.score,
-                    currentQ: p.currentQ,
-                }))
+                players: getPublicPlayers(game.players)
             });
 
             // Check if game over
-            const allFinished = game.players.every(p => p.currentQ >= game.questions.length - 1);
+            const allFinished = game.players.every(p => p.answeredQuestions.size >= game.questions.length);
             if (allFinished) {
                 const [firstPlayer, secondPlayer] = game.players;
                 const winner =
                     firstPlayer.score === secondPlayer.score
                         ? null
                         : game.players.reduce((a, b) => a.score > b.score ? a : b);
-                await recordBattleOutcome(game.players);
+                await persistBattleResult(game, { winner });
                 io.to(roomId).emit("gameOver", {
                     winnerId: winner?.id || null,
                     winnerSocketId: winner?.socketId || null,
                     winnerName: winner?.name || null,
-                    finalScores: game.players.map((p) => ({
-                        id: String(p.id),
-                        socketId: p.socketId,
-                        name: p.name,
-                        score: p.score,
-                    })),
+                    finalScores: getPublicPlayers(game.players),
                 });
                 delete activeGames[roomId];
                 broadcastStats();
@@ -224,7 +249,9 @@ export function setupSocketServer(server) {
         // Handle disconnect in-game
         const roomId = playerRoom[socket.id];
         if (roomId && activeGames[roomId]) {
-            await recordDisconnectOutcome(activeGames[roomId].players, socket.id);
+            const game = activeGames[roomId];
+            const winner = game.players.find((player) => player.socketId !== socket.id);
+            await persistBattleResult(game, { winner, completedReason: "disconnect" });
             io.to(roomId).emit("opponentDisconnected");
             delete activeGames[roomId];
         }

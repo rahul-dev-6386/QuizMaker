@@ -100,6 +100,11 @@ export default function Dashboard() {
     const getAttemptTitle = (attempt) => attempt.displayTitle || attempt.quizId?.title || 'Quiz';
     const getAttemptTopic = (attempt) => attempt.topicLabel || attempt.quizId?.category || '—';
     const isRandomAttempt = (attempt) => attempt.attemptMode === 'random';
+    const battlePeriods = [
+        { key: 'daily', label: 'Daily' },
+        { key: 'weekly', label: 'Weekly' },
+        { key: 'monthly', label: 'Monthly' },
+    ];
 
     if (loading) {
         return (
@@ -233,6 +238,83 @@ export default function Dashboard() {
                     <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(21,94,239,0.2)' }}>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Win Rate</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.3rem' }}>{Math.round(stats?.battleStats?.winRate ?? 0)}%</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(15,159,168,0.2)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Current Streak</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginTop: '0.3rem' }}>{stats?.battleStats?.currentStreak ?? 0}</div>
+                    </div>
+                    <div style={{ padding: '1rem', borderRadius: 14, background: 'var(--bg-surface)', border: '1px solid rgba(251,191,36,0.24)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Best Streak</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f59e0b', marginTop: '0.3rem' }}>{stats?.battleStats?.bestStreak ?? 0}</div>
+                    </div>
+                </div>
+
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                    gap: '1rem',
+                    marginTop: '1.25rem',
+                }}>
+                    <div style={{ padding: '1rem', borderRadius: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.8rem' }}>Recent Battle History</h3>
+                        {(stats?.battleStats?.recent || []).length === 0 ? (
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No live battles recorded yet.</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+                                {stats.battleStats.recent.map((match) => {
+                                    const resultColor =
+                                        match.result === 'win'
+                                            ? 'var(--success)'
+                                            : match.result === 'loss'
+                                                ? 'var(--danger)'
+                                                : 'var(--warning)';
+                                    return (
+                                        <div key={match.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderRadius: 12, background: 'var(--bg-subtle)' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 700, color: resultColor, textTransform: 'capitalize' }}>{match.result}</div>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                                                    vs {match.opponentName} · {match.category}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontWeight: 800 }}>{match.score} - {match.opponentScore}</div>
+                                                <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                                    {new Date(match.completedAt).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div style={{ padding: '1rem', borderRadius: 16, background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.8rem' }}>Battle Leaderboards</h3>
+                        <div style={{ display: 'grid', gap: '0.9rem' }}>
+                            {battlePeriods.map((period) => {
+                                const leaders = stats?.battleStats?.leaderboard?.[period.key] || [];
+                                return (
+                                    <div key={period.key}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
+                                            {period.label} Top Wins
+                                        </div>
+                                        {leaders.length === 0 ? (
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No winners yet.</p>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                                                {leaders.map((leader, index) => (
+                                                    <div key={`${period.key}-${leader._id || index}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.55rem 0.7rem', borderRadius: 10, background: 'var(--bg-subtle)' }}>
+                                                        <span style={{ fontWeight: 700 }}>{index + 1}. {leader.name}</span>
+                                                        <span style={{ color: 'var(--success)', fontWeight: 800 }}>{leader.wins} win{leader.wins === 1 ? '' : 's'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

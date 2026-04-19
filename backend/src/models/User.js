@@ -28,6 +28,8 @@ const UserSchema = new mongoose.Schema({
   battleWins: { type: Number, default: 0 },
   battleLosses: { type: Number, default: 0 },
   battleDraws: { type: Number, default: 0 },
+  battleCurrentStreak: { type: Number, default: 0 },
+  battleBestStreak: { type: Number, default: 0 },
 });
 
 export const Users = mongoose.model("User", UserSchema);
