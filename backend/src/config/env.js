@@ -46,26 +46,11 @@ if (!refreshSecret) {
   throw new Error("Missing required environment variable: REFRESH_SECRET");
 }
 
-export function getCookieOptions(req) {
-  const requestOrigin = normalizeOrigin(req.headers.origin);
-  const isCrossOrigin = Boolean(requestOrigin && !clientOrigins.includes(requestOrigin));
-  const secure = env.COOKIE_SECURE || Boolean(requestOrigin && requestOrigin.startsWith("https://"));
-
-  return {
-    httpOnly: true,
-    secure,
-    sameSite: secure || isCrossOrigin ? "none" : "lax",
-    path: "/",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  };
-}
-
 export const env = {
   PORT: Number(process.env.PORT || 3000),
   MONGO_URL: process.env.MONGO_URL,
   ACCESS_SECRET: accessSecret,
   REFRESH_SECRET: refreshSecret,
-  ADMIN_SECRET: process.env.ADMIN_SECRET || "admin123",
   ADMIN_AUTH_KEY: process.env.ADMIN_AUTH_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   CLIENT_ORIGIN: clientOrigins[0] || "http://localhost:5173",
@@ -83,3 +68,25 @@ export const env = {
   MAIL_APP_PASSWORD: mailAppPassword,
   MAIL_FROM: mailFrom,
 };
+
+if (env.NODE_ENV === "production" && !env.COOKIE_SECURE) {
+  console.warn("Warning: COOKIE_SECURE should be true in production");
+}
+
+if (env.NODE_ENV === "production" && clientOrigins.some(origin => origin.startsWith("http://"))) {
+  console.warn("Warning: Using HTTP origins in production. Consider HTTPS.");
+}
+
+export function getCookieOptions(req) {
+  const requestOrigin = normalizeOrigin(req.headers.origin);
+  const isCrossOrigin = Boolean(requestOrigin && !clientOrigins.includes(requestOrigin));
+  const secure = env.COOKIE_SECURE || Boolean(requestOrigin && requestOrigin.startsWith("https://"));
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: secure || isCrossOrigin ? "none" : "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  };
+}

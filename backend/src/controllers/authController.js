@@ -60,11 +60,7 @@ QuizMaster Team`;
 }
 
 function readRefreshTokenFromCookies(req) {
-  return req.headers.cookie
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("refreshToken="))
-    ?.split("=")[1];
+  return req.cookies?.refreshToken;
 }
 
 async function attachSessionCookies(req, res, user) {
@@ -116,10 +112,7 @@ export async function signupHandler(req, res) {
   }
 
   const { email, password, name, adminSecret } = parsed.data;
-  const role =
-    adminSecret && (adminSecret === env.ADMIN_SECRET || adminSecret === env.ADMIN_AUTH_KEY)
-      ? "admin"
-      : "user";
+  const role = adminSecret && adminSecret === env.ADMIN_AUTH_KEY ? "admin" : "user";
 
   try {
     const existingUser = await Users.findOne({ email });
@@ -155,7 +148,6 @@ export async function signupHandler(req, res) {
       await Otp.deleteMany({ email, purpose: "signup" });
       return res.status(500).json({
         message: "Failed to send OTP",
-        debug: err?.message || "Unknown mail error",
       });
     }
 
@@ -163,7 +155,7 @@ export async function signupHandler(req, res) {
       message: "OTP sent to your registered Email",
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || "Error While sending OTP" });
+    return res.status(500).json({ message: "Error While sending OTP" });
   }
 }
 
@@ -209,8 +201,7 @@ export async function verifyOtpHandler(req, res) {
     }
 
     const role =
-      req.body.adminSecret &&
-      (req.body.adminSecret === env.ADMIN_SECRET || req.body.adminSecret === env.ADMIN_AUTH_KEY)
+      req.body.adminSecret && req.body.adminSecret === env.ADMIN_AUTH_KEY
         ? "admin"
         : "user";
 
@@ -231,7 +222,7 @@ export async function verifyOtpHandler(req, res) {
       ...buildAuthPayload(user),
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || "Verification Failed" });
+    return res.status(500).json({ message: "Verification Failed" });
   }
 }
 
@@ -420,7 +411,6 @@ export async function forgotPasswordHandler(req, res) {
       await Otp.deleteMany({ email: parsed.data.email, purpose: "password-reset" });
       return res.status(500).json({
         message: "Error sending OTP",
-        debug: err?.message || "Unknown mail error",
       });
     }
 
@@ -428,7 +418,7 @@ export async function forgotPasswordHandler(req, res) {
       message: "If account exists, OTP sent",
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || "Error sending OTP" });
+    return res.status(500).json({ message: "Error sending OTP" });
   }
 }
 
@@ -494,7 +484,7 @@ export async function resetPasswordHandler(req, res) {
       ...(user ? buildAuthPayload(user) : {}),
     });
   } catch (e) {
-    return res.status(500).json({ message: e.message || "Error resetting password" });
+    return res.status(500).json({ message: "Error resetting password" });
   }
 }
 
@@ -505,13 +495,15 @@ export const getCurrentUserHandler = getUserInfo;
 export async function adminRequestOtp(req, res) {
   const { key } = req.body;
 
-  if (!key || (key !== env.ADMIN_AUTH_KEY && key !== env.ADMIN_SECRET)) {
+  if (!key || key !== env.ADMIN_AUTH_KEY) {
     return res.status(403).json({ message: "Invalid admin key" });
   }
 
   try {
     const user = await Users.findById(req.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    await sendAdminOtp(user.email);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -542,7 +534,6 @@ export async function adminRequestOtp(req, res) {
       await Otp.deleteMany({ email: user.email, purpose: "admin-access" });
       return res.status(500).json({
         message: "Failed to send OTP to platform admin.",
-        debug: err?.message || "Unknown mail error",
       });
     }
 
@@ -557,12 +548,8 @@ export async function adminRequestOtp(req, res) {
 export async function adminVerifyOtp(req, res) {
   const { key, otp } = req.body;
 
-  if (!key || (key !== env.ADMIN_AUTH_KEY && key !== env.ADMIN_SECRET)) {
+if (!key || key !== env.ADMIN_AUTH_KEY) {
     return res.status(403).json({ message: "Invalid admin key" });
-  }
-
-  if (!otp || typeof otp !== "string" || otp.trim().length !== 6) {
-    return res.status(400).json({ message: "Invalid OTP format" });
   }
 
   try {

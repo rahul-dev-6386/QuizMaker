@@ -32,4 +32,8 @@ const UserSchema = new mongoose.Schema({
   battleBestStreak: { type: Number, default: 0 },
 });
 
+// Add indexes for frequently queried fields
+UserSchema.index({ role: 1 });
+UserSchema.index({ lastActiveDate: -1 });
+
 export const Users = mongoose.model("User", UserSchema);
