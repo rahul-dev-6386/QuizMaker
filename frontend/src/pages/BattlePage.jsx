@@ -47,13 +47,43 @@ export default function BattlePage() {
     const [timeElapsed, setTimeElapsed] = useState(0);
     const timerRef = useRef(null);
 
+    const startQuestionTimer = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimeElapsed(0);
+        timerRef.current = setInterval(() => {
+            setTimeElapsed(prev => prev + 1);
+        }, 1000);
+    };
+
+    const stopQuestionTimer = () => {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const leaveQueue = () => {
+        if (queueTimerRef.current) clearInterval(queueTimerRef.current);
+        // Just reconnect socket to drop out of queue
+        if (socketRef.current) {
+            socketRef.current.disconnect();
+            socketRef.current.connect();
+        }
+        setStatus('idle');
+    };
+
     useEffect(() => {
         if (!user) {
             navigate('/');
             return;
         }
 
-        const socket = io(SOCKET_SERVER_URL);
+        const socket = io(SOCKET_SERVER_URL, {
+            withCredentials: true,
+            auth: {
+                token: document.cookie.split(';').find(c => c.trim().startsWith('accessToken='))?.split('=')[1]
+            }
+        });
         socketRef.current = socket;
 
         socket.on('lobbyStats', (data) => {
@@ -136,21 +166,6 @@ export default function BattlePage() {
         }
     }, [queueWait, status]);
 
-    const startQuestionTimer = () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        setTimeElapsed(0);
-        timerRef.current = setInterval(() => {
-            setTimeElapsed(prev => prev + 1);
-        }, 1000);
-    };
-
-    const stopQuestionTimer = () => {
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-    };
-
     const joinQueue = () => {
         if (!socketRef.current) return;
         setStatus('queue');
@@ -165,16 +180,6 @@ export default function BattlePage() {
             name: user.name,
             category: selectedCategory
         });
-    };
-
-    const leaveQueue = () => {
-        if (queueTimerRef.current) clearInterval(queueTimerRef.current);
-        // Just reconnect socket to drop out of queue
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-            socketRef.current.connect();
-        }
-        setStatus('idle');
     };
 
     const submitAnswer = (optIndex) => {
@@ -428,7 +433,8 @@ export default function BattlePage() {
                 width: 140, height: 140, margin: '0 auto 3rem auto',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)',
-                border: '2px solid rgba(239, 68, 68, 0.3)'
+                border: '2px solid rgba(239, 68, 68, 0.3)',
+                className: 'battle-matchmaking-pulse'
             }}>
                 {/* Pulse ring using our existing pulseGlow animation */ }
                 <div style={{
