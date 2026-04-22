@@ -1,5 +1,22 @@
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
+import { z } from "zod";
 import { BattleMatch, Quiz, Users } from "./models/index.js";
+import { env } from "./config/env.js";
+
+// Socket event validation schemas
+const joinQueueSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().min(1).max(100),
+  category: z.string().default("General"),
+});
+
+const submitAnswerSchema = z.object({
+  roomId: z.string().min(1),
+  questionIndex: z.number().int().min(0),
+  isCorrect: z.boolean(),
+  scoreTimeElapsed: z.number().min(0),
+});
 
 // Matchmaking queues per category
 // { "General": [userId, userId2], ... }
@@ -12,12 +29,50 @@ const activeGames = {};
 // Player to room map
 const playerRoom = {};
 
+// Simple lock map to prevent race conditions in queue operations
+const queueLocks = new Map();
+
+async function withQueueLock(category, fn) {
+  while (queueLocks.get(category)) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  queueLocks.set(category, true);
+  try {
+    return await fn();
+  } finally {
+    queueLocks.delete(category);
+  }
+}
+
 const ioConfig = {
   cors: {
-    origin: "*", // allow all origins for now
+    origin: env.CLIENT_ORIGINS,
     methods: ["GET", "POST"]
   }
 };
+
+// Socket authentication middleware
+function authenticateSocket(socket, next) {
+  const token = socket.handshake.auth.token || 
+                socket.handshake.headers.authorization?.replace("Bearer ", "") ||
+                socket.handshake.headers.cookie?.split(";")
+                  .map((part) => part.trim())
+                  .find((part) => part.startsWith("accessToken="))
+                  ?.split("=")[1];
+
+  if (!token) {
+    return next(new Error("Authentication error: No token provided"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, env.ACCESS_SECRET);
+    socket.userId = decoded.id;
+    socket.role = decoded.role;
+    next();
+  } catch (err) {
+    next(new Error("Authentication error: Invalid or expired token"));
+  }
+}
 
 async function getBattleQuestions(category, count = 5) {
   const matchStage =
@@ -119,6 +174,9 @@ async function persistBattleResult(game, { winner = null, completedReason = "fin
 export function setupSocketServer(server) {
   const io = new Server(server, ioConfig);
 
+  // Apply authentication middleware
+  io.use(authenticateSocket);
+
   const broadcastStats = () => {
       const stats = {};
       for (const cat in queues) {
@@ -134,71 +192,94 @@ export function setupSocketServer(server) {
   };
 
   io.on("connection", (socket) => {
-    console.log("Client connected:", socket.id);
+    console.log("Client connected:", socket.id, "User:", socket.userId);
     broadcastStats();
 
-    socket.on("joinQueue", async ({ userId, name, category = "General" }) => {
+    socket.on("joinQueue", async (data) => {
+      // Validate payload
+      const parsed = joinQueueSchema.safeParse(data);
+      if (!parsed.success) {
+        return socket.emit("error", { message: "Invalid joinQueue payload", errors: parsed.error.issues });
+      }
+
+      const { userId, name, category } = parsed.data;
+
+      // Verify userId matches authenticated user
+      if (String(userId) !== String(socket.userId)) {
+        return socket.emit("error", { message: "Unauthorized: User ID mismatch" });
+      }
+
       const normalizedUserId = String(userId || "");
 
-      // Basic queueing
-      if (!queues[category]) queues[category] = [];
-      queues[category].push({ socketId: socket.id, userId: normalizedUserId, name });
+      await withQueueLock(category, async () => {
+        // Basic queueing
+        if (!queues[category]) queues[category] = [];
+        queues[category].push({ socketId: socket.id, userId: normalizedUserId, name });
 
-      socket.join(`queue_${category}`);
-      broadcastStats();
-
-      // If we have 2 players, start game
-      if (queues[category].length >= 2) {
-        const p1 = queues[category].shift();
-        const p2 = queues[category].shift();
-
-        const roomId = `room_${Date.now()}_${Math.random()}`;
-        
-        const questions = await getBattleQuestions(category, 5);
-
-        activeGames[roomId] = {
-            roomId,
-            players: [
-                { id: String(p1.userId), socketId: p1.socketId, name: p1.name, score: 0, answeredQuestions: new Set() },
-                { id: String(p2.userId), socketId: p2.socketId, name: p2.name, score: 0, answeredQuestions: new Set() }
-            ],
-            questions,
-            category,
-            startedAt: new Date(),
-            completed: false,
-        };
-
-        // Emit to both
-        io.to(p1.socketId).socketsJoin(roomId);
-        io.to(p2.socketId).socketsJoin(roomId);
-        playerRoom[p1.socketId] = roomId;
-        playerRoom[p2.socketId] = roomId;
-
-        const payloadPlayers = activeGames[roomId].players.map((p) => ({
-          id: String(p.id),
-          socketId: p.socketId,
-          name: p.name,
-          score: 0,
-          answeredCount: 0,
-        }));
-
-        io.to(p1.socketId).emit("gameStart", {
-            roomId,
-            selfSocketId: p1.socketId,
-            players: payloadPlayers,
-            questions
-        });
-        io.to(p2.socketId).emit("gameStart", {
-            roomId,
-            selfSocketId: p2.socketId,
-            players: payloadPlayers,
-            questions
-        });
+        socket.join(`queue_${category}`);
         broadcastStats();
-      }
+
+        // If we have 2 players, start game
+        if (queues[category].length >= 2) {
+          const p1 = queues[category].shift();
+          const p2 = queues[category].shift();
+
+          const roomId = `room_${Date.now()}_${Math.random()}`;
+          
+          const questions = await getBattleQuestions(category, 5);
+
+          activeGames[roomId] = {
+              roomId,
+              players: [
+                  { id: String(p1.userId), socketId: p1.socketId, name: p1.name, score: 0, answeredQuestions: new Set() },
+                  { id: String(p2.userId), socketId: p2.socketId, name: p2.name, score: 0, answeredQuestions: new Set() }
+              ],
+              questions,
+              category,
+              startedAt: new Date(),
+              completed: false,
+          };
+
+          // Emit to both
+          io.to(p1.socketId).socketsJoin(roomId);
+          io.to(p2.socketId).socketsJoin(roomId);
+          playerRoom[p1.socketId] = roomId;
+          playerRoom[p2.socketId] = roomId;
+
+          const payloadPlayers = activeGames[roomId].players.map((p) => ({
+            id: String(p.id),
+            socketId: p.socketId,
+            name: p.name,
+            score: 0,
+            answeredCount: 0,
+          }));
+
+          io.to(p1.socketId).emit("gameStart", {
+              roomId,
+              selfSocketId: p1.socketId,
+              players: payloadPlayers,
+              questions
+          });
+          io.to(p2.socketId).emit("gameStart", {
+              roomId,
+              selfSocketId: p2.socketId,
+              players: payloadPlayers,
+              questions
+          });
+          broadcastStats();
+        }
+      });
     });
 
-    socket.on("submitAnswer", async ({ roomId, questionIndex, isCorrect, scoreTimeElapsed }) => {
+    socket.on("submitAnswer", async (data) => {
+        // Validate payload
+        const parsed = submitAnswerSchema.safeParse(data);
+        if (!parsed.success) {
+            return socket.emit("error", { message: "Invalid submitAnswer payload", errors: parsed.error.issues });
+        }
+
+        const { roomId, questionIndex, isCorrect, scoreTimeElapsed } = parsed.data;
+
         const game = activeGames[roomId];
         if (!game) return;
 

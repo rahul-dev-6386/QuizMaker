@@ -6,7 +6,7 @@ const OtpSchema = new mongoose.Schema(
     otp: { type: String, required: true },
     purpose: {
       type: String,
-      enum: ["signup", "password-reset"],
+      enum: ["signup", "password-reset", "admin-access"],
       required: true,
       index: true,
     },
@@ -18,5 +18,8 @@ const OtpSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Add TTL index to automatically expire OTP records after 1 hour
+OtpSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
 
 export const Otp = mongoose.model("Otp", OtpSchema);

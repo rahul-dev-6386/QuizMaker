@@ -70,6 +70,6 @@ Instructions:
 
   } catch (err) {
     console.error("Chatbot error:", err.message);
-    return res.status(500).json({ message: "Sharthi is currently offline due to a server error." });
+    return res.status(500).json({ message: "Failed to generate response" });
   }
 }

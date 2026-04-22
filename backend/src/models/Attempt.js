@@ -31,4 +31,10 @@ const AttemptSchema = new mongoose.Schema({
   },
 });
 
+// Add indexes for frequently queried fields
+AttemptSchema.index({ userId: 1 });
+AttemptSchema.index({ quizId: 1 });
+AttemptSchema.index({ userId: 1, quizId: 1 });
+AttemptSchema.index({ submittedAt: -1 });
+
 export const Attempt = mongoose.model("Attempt", AttemptSchema);

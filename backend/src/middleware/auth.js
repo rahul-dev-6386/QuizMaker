@@ -3,11 +3,7 @@ import { env } from "../config/env.js";
 
 export function auth(req, res, next) {
   const authHeader = req.headers.authorization;
-  const cookieToken = req.headers.cookie
-    ?.split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith("accessToken="))
-    ?.split("=")[1];
+  const cookieToken = req.cookies?.accessToken;
   const accessToken =
     (authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null) ||
     cookieToken;

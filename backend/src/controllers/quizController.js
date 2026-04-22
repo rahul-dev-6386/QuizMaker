@@ -249,6 +249,10 @@ export async function getAttemptReport(req, res) {
 export async function getLeaderboard(req, res) {
   const quizId = req.params.quizId;
 
+  if (!mongoose.Types.ObjectId.isValid(quizId)) {
+    return res.status(400).json({ message: "Invalid quiz ID" });
+  }
+
   try {
     const leaderboard = await Attempt.find({ quizId })
       .sort({ score: -1 })
